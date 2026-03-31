@@ -1,0 +1,1282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Financial Calculators</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--surface:#13131a;--surface2:#1c1c28;--border:#2a2a3d;--accent:#c8f564;--accent2:#7b61ff;--accent3:#ff6b6b;--accent4:#ffd166;--text:#e8e8f0;--muted:#6b6b8a;--success:#4ade80;--danger:#f87171;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;overflow-x:hidden;}
+.screen{display:none;min-height:100vh;animation:fadeIn .32s ease;}
+.screen.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+/* LANDING */
+#s-landing{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:60px 24px;position:relative;overflow:hidden;}
+#s-landing.active{display:flex;}
+.grid-bg{position:absolute;inset:0;background-image:linear-gradient(rgba(200,245,100,.04)1px,transparent 1px),linear-gradient(90deg,rgba(200,245,100,.04)1px,transparent 1px);background-size:48px 48px;pointer-events:none;}
+.glow-orb{position:absolute;border-radius:50%;filter:blur(80px);opacity:.35;pointer-events:none;}
+.orb1{width:400px;height:400px;background:var(--accent2);top:-100px;right:-80px;}
+.orb2{width:300px;height:300px;background:var(--accent);bottom:-60px;left:-60px;}
+.badge{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);border:1px solid rgba(200,245,100,.3);padding:6px 14px;border-radius:100px;margin-bottom:32px;}
+.landing-title{font-family:'DM Serif Display',serif;font-size:clamp(48px,8vw,96px);line-height:.95;text-align:center;max-width:800px;margin-bottom:20px;}
+.landing-title em{color:var(--accent);font-style:italic;}
+.landing-sub{font-size:16px;color:var(--muted);text-align:center;max-width:480px;line-height:1.6;margin-bottom:48px;}
+.btn-primary{background:var(--accent);color:#0a0a0f;border:none;padding:16px 40px;border-radius:100px;font-family:'Syne',sans-serif;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:.04em;transition:all .2s;}
+.btn-primary:hover{transform:scale(1.03);box-shadow:0 0 32px rgba(200,245,100,.4);}
+/* PROGRESS */
+.progress-wrap{position:sticky;top:0;z-index:100;background:rgba(10,10,15,.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:14px 24px;display:none;}
+.progress-inner{max-width:680px;margin:0 auto;display:flex;align-items:center;gap:14px;}
+.progress-track{flex:1;height:3px;background:var(--border);border-radius:100px;overflow:hidden;}
+.progress-fill{height:100%;background:var(--accent);border-radius:100px;transition:width .45s ease;}
+.progress-label{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);white-space:nowrap;}
+.pdots{display:flex;gap:6px;}
+.pdot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:all .3s;border:1.5px solid var(--border);}
+.pdot.done{background:var(--accent);border-color:var(--accent);}
+.pdot.current{background:transparent;border-color:var(--accent);box-shadow:0 0 7px rgba(200,245,100,.6);}
+/* FORM SHELL */
+.form-shell{max-width:680px;margin:0 auto;padding:48px 24px 100px;}
+/* STEP HEADER */
+.step-q{font-family:'DM Serif Display',serif;font-size:30px;line-height:1.2;margin-bottom:8px;margin-top:36px;}
+.step-hint{font-size:13px;color:var(--muted);margin-bottom:32px;line-height:1.6;}
+/* MODULE TILES */
+.module-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(188px,1fr));gap:12px;margin-bottom:32px;}
+.mod-tile{background:var(--surface);border:2px solid var(--border);border-radius:16px;padding:20px 18px;cursor:pointer;transition:all .2s;position:relative;user-select:none;}
+.mod-tile:hover{transform:translateY(-2px);border-color:var(--tile-color,var(--accent));}
+.mod-tile.sel{border-color:var(--tile-color,var(--accent));background:color-mix(in srgb,var(--tile-color,var(--accent)) 8%,var(--surface));}
+.mod-tile .chk{position:absolute;top:12px;right:12px;width:20px;height:20px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;transition:all .2s;}
+.mod-tile.sel .chk{background:var(--tile-color,var(--accent));border-color:var(--tile-color,var(--accent));color:#000;}
+.tile-icon{font-size:28px;margin-bottom:10px;}
+.tile-name{font-size:13px;font-weight:700;letter-spacing:.04em;margin-bottom:4px;}
+.tile-desc{font-size:11px;color:var(--muted);line-height:1.4;}
+.sel-all-btn{background:none;border:1px dashed var(--border);color:var(--muted);padding:8px 18px;border-radius:8px;cursor:pointer;font-family:'Syne',sans-serif;font-size:12px;transition:all .2s;margin-bottom:24px;display:inline-block;}
+.sel-all-btn:hover{border-color:var(--accent);color:var(--accent);}
+/* FIELDS */
+.sec-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+.fg{display:grid;gap:14px;margin-bottom:22px;}
+.fg2{grid-template-columns:1fr 1fr;}
+.field{display:flex;flex-direction:column;gap:6px;}
+.field label{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.04em;}
+.field input,.field select{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-family:'DM Mono',monospace;font-size:14px;transition:border-color .2s;width:100%;}
+.field input:focus,.field select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(200,245,100,.1);}
+.field select option{background:var(--surface2);}
+/* DEBT ROWS */
+.debt-row{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:10px;}
+.debt-row-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.debt-row-name{font-size:13px;font-weight:700;color:var(--accent3);}
+.rm-debt{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:0 4px;line-height:1;}
+.rm-debt:hover{color:var(--danger);}
+.drg{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+.add-debt-btn{background:none;border:1px dashed var(--border);color:var(--muted);padding:10px;border-radius:10px;cursor:pointer;font-family:'Syne',sans-serif;font-size:12px;width:100%;transition:all .2s;text-align:center;margin-bottom:8px;}
+.add-debt-btn:hover{border-color:var(--accent3);color:var(--accent3);}
+/* STEP NAV */
+.step-nav{display:flex;justify-content:space-between;align-items:center;margin-top:32px;padding-top:24px;border-top:1px solid var(--border);}
+.btn-back{background:none;border:1px solid var(--border);color:var(--muted);padding:12px 24px;border-radius:100px;font-family:'Syne',sans-serif;font-size:14px;cursor:pointer;transition:all .2s;}
+.btn-back:hover{border-color:var(--text);color:var(--text);}
+.btn-next{background:var(--accent);color:#0a0a0f;border:none;padding:14px 32px;border-radius:100px;font-family:'Syne',sans-serif;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:.04em;transition:all .2s;display:flex;align-items:center;gap:8px;}
+.btn-next:hover{transform:scale(1.02);box-shadow:0 0 24px rgba(200,245,100,.35);}
+.btn-next:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none;}
+.step-ctr{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);}
+/* RESULTS */
+.results-wrap{max-width:1100px;margin:0 auto;padding:48px 24px 80px;}
+.results-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:40px;flex-wrap:wrap;gap:16px;}
+.results-title{font-family:'DM Serif Display',serif;font-size:40px;}
+.results-title span{color:var(--accent);}
+.recalc-btn{background:transparent;border:1px solid var(--border);color:var(--muted);padding:10px 20px;border-radius:100px;font-family:'Syne',sans-serif;font-size:13px;cursor:pointer;transition:all .2s;}
+.recalc-btn:hover{border-color:var(--accent);color:var(--accent);}
+.results-nav{display:flex;gap:8px;margin-bottom:28px;flex-wrap:wrap;}
+.nav-tab{padding:8px 16px;border-radius:100px;font-size:12px;font-weight:700;letter-spacing:.04em;cursor:pointer;border:1px solid var(--border);color:var(--muted);background:none;transition:all .2s;font-family:'Syne',sans-serif;}
+.nav-tab.active,.nav-tab:hover{border-color:var(--accent);color:var(--accent);background:rgba(200,245,100,.06);}
+/* RESULT CARDS */
+#results-container{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px;}
+.result-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;overflow:hidden;}
+.rcard-hdr{padding:20px 24px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);}
+.rcard-title{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:700;letter-spacing:.04em;}
+.rcard-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.show-calc-btn{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.1em;color:var(--muted);background:none;border:1px solid var(--border);padding:4px 10px;border-radius:100px;cursor:pointer;transition:all .2s;}
+.show-calc-btn:hover{border-color:var(--accent2);color:var(--accent2);}
+.rcard-body{padding:20px 24px 24px;}
+.metric-row{display:flex;justify-content:space-between;align-items:baseline;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);}
+.metric-row:last-child{border-bottom:none;}
+.metric-label{font-size:12px;color:var(--muted);}
+.metric-value{font-family:'DM Mono',monospace;font-size:15px;font-weight:500;}
+.metric-value.positive{color:var(--success);}
+.metric-value.negative{color:var(--danger);}
+.metric-value.accent{color:var(--accent);}
+.metric-value.accent2{color:var(--accent2);}
+.metric-value.warn{color:var(--accent4);}
+.big-metric{text-align:center;padding:16px 0 8px;}
+.big-metric-value{font-family:'DM Serif Display',serif;font-size:44px;line-height:1;}
+.big-metric-label{font-size:11px;color:var(--muted);margin-top:4px;letter-spacing:.06em;text-transform:uppercase;}
+.comp-panel{display:none;background:var(--surface2);border-top:1px solid var(--border);padding:16px 24px;}
+.comp-panel.open{display:block;}
+.comp-step{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);line-height:1.8;padding:4px 0;}
+.comp-step .var{color:var(--accent2);}
+.comp-step .val{color:var(--accent);}
+.stat-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:100px;font-size:11px;font-weight:700;letter-spacing:.06em;}
+.stat-badge.good{background:rgba(74,222,128,.1);color:var(--success);border:1px solid rgba(74,222,128,.2);}
+.stat-badge.warn{background:rgba(255,209,102,.1);color:var(--accent4);border:1px solid rgba(255,209,102,.2);}
+.stat-badge.bad{background:rgba(248,113,113,.1);color:var(--danger);border:1px solid rgba(248,113,113,.2);}
+.pbar-wrap{margin:8px 0;}
+.pbar-label{display:flex;justify-content:space-between;margin-bottom:4px;}
+.pbar-label span{font-size:11px;color:var(--muted);}
+.pbar{height:6px;background:var(--border);border-radius:100px;overflow:hidden;}
+.pbar-fill{height:100%;border-radius:100px;transition:width 1s ease;}
+.dt{width:100%;border-collapse:collapse;font-size:12px;}
+.dt th{color:var(--muted);font-weight:600;text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);}
+.dt td{padding:8px;border-bottom:1px solid rgba(255,255,255,.03);font-family:'DM Mono',monospace;}
+.dt tr:last-child td{border-bottom:none;}
+.amort-scroll{max-height:200px;overflow-y:auto;}
+.amort-scroll::-webkit-scrollbar{width:4px;}
+.amort-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+/* SENSITIVITY */
+.sens-panel{background:var(--surface);border:1px solid var(--border);border-radius:20px;margin-bottom:28px;overflow:hidden;}
+.sens-hdr{padding:18px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;}
+.sens-hdr:hover{background:rgba(200,245,100,.03);}
+.sens-pill{background:rgba(200,245,100,.12);color:var(--accent);border:1px solid rgba(200,245,100,.25);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.15em;padding:4px 10px;border-radius:100px;text-transform:uppercase;}
+.sens-toggle{font-size:18px;color:var(--muted);transition:transform .25s;}
+.sens-toggle.open{transform:rotate(180deg);}
+.sens-body{display:none;padding:24px;}
+.sens-body.open{display:block;}
+.sens-desc{font-size:12px;color:var(--muted);margin-bottom:24px;line-height:1.6;}
+.slider-sections{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:18px;margin-bottom:28px;}
+.slider-group{background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:16px 18px;}
+.slider-group-title{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;}
+.slider-row{margin-bottom:14px;}
+.slider-row:last-child{margin-bottom:0;}
+.sl-label-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.sl-label{font-size:12px;color:var(--text);}
+.sl-val{font-family:'DM Mono',monospace;font-size:13px;color:var(--accent);font-weight:500;min-width:70px;text-align:right;}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:2px;background:var(--border);outline:none;cursor:pointer;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 8px rgba(200,245,100,.4);}
+.sens-outputs{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:12px;margin-bottom:20px;}
+.so-card{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:14px 16px;transition:border-color .2s;}
+@keyframes pb{0%{box-shadow:0 0 0 0 rgba(200,245,100,.3)}50%{box-shadow:0 0 0 6px rgba(200,245,100,0)}100%{box-shadow:none}}
+.so-card.changed{border-color:rgba(200,245,100,.4);animation:pb .4s ease;}
+.so-label{font-size:10px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;}
+.so-value{font-family:'DM Serif Display',serif;font-size:22px;line-height:1;}
+.so-delta{font-family:'DM Mono',monospace;font-size:11px;margin-top:4px;display:flex;align-items:center;gap:3px;}
+.so-delta.up{color:var(--success);}
+.so-delta.down{color:var(--danger);}
+.so-delta.neutral{color:var(--muted);}
+.scen-bar{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
+.scen-btn{padding:7px 16px;border-radius:100px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:none;color:var(--muted);font-family:'Syne',sans-serif;transition:all .2s;}
+.scen-btn:hover,.scen-btn.active{background:rgba(123,97,255,.12);border-color:var(--accent2);color:var(--accent2);}
+.rst-btn{background:none;border:1px solid var(--border);color:var(--muted);padding:8px 18px;border-radius:100px;font-family:'Syne',sans-serif;font-size:12px;cursor:pointer;transition:all .2s;}
+.rst-btn:hover{border-color:var(--accent3);color:var(--accent3);}
+.hm-wrap{overflow-x:auto;margin-top:8px;}
+.hm-title{font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;}
+.hm-table{width:100%;border-collapse:separate;border-spacing:3px;font-family:'DM Mono',monospace;font-size:11px;}
+.hm-table th{color:var(--muted);font-size:10px;font-weight:600;padding:4px 6px;text-align:center;}
+.hm-table td{padding:6px 8px;text-align:center;border-radius:6px;}
+.hm-table .rl{text-align:left;color:var(--muted);background:none;}
+.hm-great{background:rgba(74,222,128,.2);color:#4ade80;}
+.hm-good{background:rgba(74,222,128,.1);color:#86efac;}
+.hm-ok{background:rgba(255,209,102,.12);color:#ffd166;}
+.hm-bad{background:rgba(248,113,113,.15);color:#f87171;}
+.hm-base{background:rgba(200,245,100,.18);color:var(--accent);outline:1px solid var(--accent);}
+@media(max-width:600px){.fg2{grid-template-columns:1fr;}.drg{grid-template-columns:1fr 1fr;}.results-title{font-size:28px;}.sens-outputs{grid-template-columns:1fr 1fr;}.module-grid{grid-template-columns:1fr 1fr;}}
+</style>
+</head>
+<body>
+
+<!-- LANDING -->
+<div id="s-landing" class="screen active">
+  <div class="grid-bg"></div>
+  <div class="glow-orb orb1"></div>
+  <div class="glow-orb orb2"></div>
+  <div class="badge">Personal Finance Suite</div>
+  <h1 class="landing-title">Your Money.<br><em>Fully Calculated.</em></h1>
+  <p class="landing-sub">Tell us what you want to plan. We'll ask only the questions that matter — one at a time.</p>
+  <button class="btn-primary" onclick="startFlow()">Get Started →</button>
+</div>
+
+<!-- STICKY PROGRESS BAR -->
+<div class="progress-wrap" id="progress-wrap">
+  <div class="progress-inner">
+    <div class="pdots" id="pdots"></div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+    <div class="progress-label" id="progress-label">1 / 1</div>
+  </div>
+</div>
+
+<!-- STEP 0 — MODULE SELECTOR -->
+<div id="s-step0" class="screen">
+  <div class="form-shell">
+    <div class="step-q">What would you like to calculate?</div>
+    <div class="step-hint">Pick everything that applies — we'll walk you through each one, step by step. You can select multiple.</div>
+    <button class="sel-all-btn" id="selAllBtn" onclick="toggleSelectAll()">✦ Select All</button>
+    <div class="module-grid">
+      <div class="mod-tile" style="--tile-color:#ff6b6b" data-mod="debt" onclick="toggleMod(this)">
+        <div class="chk">✓</div><div class="tile-icon">💳</div>
+        <div class="tile-name">Debt Repayment</div>
+        <div class="tile-desc">Payoff timelines, snowball vs avalanche strategies</div>
+      </div>
+      <div class="mod-tile" style="--tile-color:#7b61ff" data-mod="loan" onclick="toggleMod(this)">
+        <div class="chk">✓</div><div class="tile-icon">🏠</div>
+        <div class="tile-name">Loan / Mortgage</div>
+        <div class="tile-desc">Monthly payment, amortization, interest breakdown</div>
+      </div>
+      <div class="mod-tile" style="--tile-color:#ffd166" data-mod="cashflow" onclick="toggleMod(this)">
+        <div class="chk">✓</div><div class="tile-icon">💰</div>
+        <div class="tile-name">Cash Flow</div>
+        <div class="tile-desc">Income vs expenses, surplus/deficit, risk flags</div>
+      </div>
+      <div class="mod-tile" style="--tile-color:#c8f564" data-mod="retirement" onclick="toggleMod(this)">
+        <div class="chk">✓</div><div class="tile-icon">🏖️</div>
+        <div class="tile-name">Retirement</div>
+        <div class="tile-desc">Portfolio projection, withdrawal sustainability</div>
+      </div>
+      <div class="mod-tile" style="--tile-color:#4ade80" data-mod="investment" onclick="toggleMod(this)">
+        <div class="chk">✓</div><div class="tile-icon">📈</div>
+        <div class="tile-name">Investment Growth</div>
+        <div class="tile-desc">Compound growth, final portfolio value over time</div>
+      </div>
+      <div class="mod-tile" style="--tile-color:#f472b6" data-mod="networth" onclick="toggleMod(this)">
+        <div class="chk">✓</div><div class="tile-icon">🏦</div>
+        <div class="tile-name">Net Worth</div>
+        <div class="tile-desc">Assets vs liabilities, financial goals tracking</div>
+      </div>
+    </div>
+    <div class="step-nav">
+      <button class="btn-back" onclick="goLanding()">← Back</button>
+      <div style="display:flex;align-items:center;gap:14px;">
+        <span id="mod-count" style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);">0 selected</span>
+        <button class="btn-next" id="btn-begin" onclick="startSteps()" disabled>Begin <span style="font-size:16px">→</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DYNAMIC INPUT STEPS -->
+<div id="s-steps" class="screen">
+  <div class="form-shell">
+    <div id="step-content"></div>
+    <div class="step-nav">
+      <button class="btn-back" onclick="prevStep()">← Back</button>
+      <div style="display:flex;align-items:center;gap:14px;">
+        <span class="step-ctr" id="step-ctr"></span>
+        <button class="btn-next" id="btn-next" onclick="nextStep()">
+          <span id="next-lbl">Next</span> <span style="font-size:16px">→</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div id="s-results" class="screen">
+  <div class="results-wrap">
+    <div class="results-hdr">
+      <div>
+        <div style="font-size:11px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;">Your Financial Picture</div>
+        <div class="results-title">Results <span>&amp;</span> Analysis</div>
+      </div>
+      <button class="recalc-btn" onclick="restart()">← Start Over</button>
+    </div>
+
+    <!-- SENSITIVITY PANEL -->
+    <div class="sens-panel">
+      <div class="sens-hdr" onclick="toggleSens()">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span class="sens-pill">⚡ Live</span>
+          <span style="font-size:15px;font-weight:700;">Sensitivity &amp; What-If Analysis</span>
+        </div>
+        <span class="sens-toggle" id="sens-toggle">▼</span>
+      </div>
+      <div class="sens-body" id="sens-body">
+        <p class="sens-desc">Drag any slider to instantly see how changes ripple across all outputs. Deltas show the difference from your original inputs.</p>
+        <div class="scen-bar">
+          <span style="font-size:11px;color:var(--muted);align-self:center;margin-right:4px;">Scenarios:</span>
+          <button class="scen-btn" onclick="applyScen('base',event)">📍 Baseline</button>
+          <button class="scen-btn" onclick="applyScen('optimistic',event)">🚀 Optimistic</button>
+          <button class="scen-btn" onclick="applyScen('pessimistic',event)">⛈ Pessimistic</button>
+          <button class="scen-btn" onclick="applyScen('aggressive',event)">💪 Aggressive</button>
+          <button class="scen-btn" onclick="applyScen('recession',event)">📉 Recession</button>
+          <button class="rst-btn" onclick="applyScen('base',event)">↺ Reset</button>
+        </div>
+        <div class="slider-sections" id="sens-sliders"></div>
+        <div style="font-size:11px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px;">↓ Live Output — Real-Time</div>
+        <div class="sens-outputs" id="sens-outputs"></div>
+        <div id="sens-heatmaps"></div>
+      </div>
+    </div>
+
+    <div class="results-nav" id="results-nav"></div>
+    <div id="results-container"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+// ─── STATE ───────────────────────────────────────────────
+let selected = [];        // selected module keys
+let steps = [];           // ordered module keys for steps
+let curStep = -1;
+let fd = {};              // form data: fd[mod][key] = value
+let BASE = {}, SENS = {};
+let allSel = false;
+let debtRowCount = 0;
+
+const ORDER = ['debt','loan','cashflow','retirement','investment','networth'];
+const DEBT_NAMES = ['Credit Card 1','Credit Card 2','Student Loan','Mortgage','Auto Loan','Personal Loan','Medical Debt','Other Debt'];
+
+// ─── NAVIGATION ──────────────────────────────────────────
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+function startFlow() { show('s-step0'); document.getElementById('progress-wrap').style.display = 'none'; }
+function goLanding() { show('s-landing'); document.getElementById('progress-wrap').style.display = 'none'; }
+function restart()   { selected=[]; fd={}; steps=[]; curStep=-1; allSel=false; document.querySelectorAll('.mod-tile').forEach(t=>t.classList.remove('sel')); document.getElementById('selAllBtn').textContent='✦ Select All'; updateCount(); goLanding(); }
+
+// ─── MODULE SELECTOR ────────────────────────────────────
+function toggleMod(tile) {
+  tile.classList.toggle('sel');
+  const m = tile.dataset.mod;
+  if (tile.classList.contains('sel')) { if (!selected.includes(m)) selected.push(m); }
+  else selected = selected.filter(x => x !== m);
+  updateCount();
+}
+function updateCount() {
+  const n = selected.length;
+  document.getElementById('mod-count').textContent = n === 0 ? '0 selected' : n + ' selected';
+  document.getElementById('btn-begin').disabled = n === 0;
+}
+function toggleSelectAll() {
+  allSel = !allSel;
+  selected = [];
+  document.querySelectorAll('.mod-tile').forEach(t => {
+    if (allSel) { t.classList.add('sel'); selected.push(t.dataset.mod); }
+    else t.classList.remove('sel');
+  });
+  document.getElementById('selAllBtn').textContent = allSel ? '✦ Deselect All' : '✦ Select All';
+  updateCount();
+}
+function startSteps() {
+  steps = ORDER.filter(m => selected.includes(m));
+  debtRowCount = 0;
+  buildProgress();
+  renderStep(0);
+  document.getElementById('progress-wrap').style.display = 'block';
+  show('s-steps');
+}
+
+// ─── PROGRESS ───────────────────────────────────────────
+function buildProgress() {
+  document.getElementById('pdots').innerHTML = steps.map((_,i) => `<div class="pdot" id="pd-${i}"></div>`).join('');
+}
+function updateProgress(idx) {
+  const total = steps.length;
+  document.getElementById('progress-fill').style.width = (total <= 1 ? 100 : Math.round(idx/(total-1)*100)) + '%';
+  document.getElementById('progress-label').textContent = `${idx+1} / ${total}`;
+  steps.forEach((_,i) => {
+    const d = document.getElementById('pd-'+i);
+    if (d) d.className = 'pdot' + (i < idx ? ' done' : i === idx ? ' current' : '');
+  });
+}
+
+// ─── STEP RENDERING ─────────────────────────────────────
+function renderStep(idx) {
+  curStep = idx;
+  updateProgress(idx);
+  const mod = steps[idx];
+  const isLast = idx === steps.length - 1;
+  document.getElementById('next-lbl').textContent = isLast ? 'Calculate' : 'Next';
+  document.getElementById('step-ctr').textContent = `${idx+1} of ${steps.length}`;
+  document.getElementById('step-content').innerHTML = TEMPLATES[mod]();
+  if (mod === 'debt' && (!fd.debt || !fd.debt._rows || fd.debt._rows.length === 0)) {
+    setTimeout(() => addDebtRow(), 20);
+  }
+  restoreStep(mod);
+}
+function nextStep() {
+  saveStep(steps[curStep]);
+  if (curStep < steps.length - 1) renderStep(curStep + 1);
+  else { saveStep(steps[curStep]); buildResults(); }
+}
+function prevStep() {
+  saveStep(steps[curStep]);
+  if (curStep === 0) { show('s-step0'); document.getElementById('progress-wrap').style.display='none'; }
+  else renderStep(curStep - 1);
+}
+function saveStep(mod) {
+  if (!fd[mod]) fd[mod] = {};
+  document.querySelectorAll('#step-content [data-key]').forEach(el => { fd[mod][el.dataset.key] = el.value; });
+  if (mod === 'debt') {
+    fd[mod]._rows = [];
+    document.querySelectorAll('#debt-rows .debt-row').forEach(r => {
+      fd[mod]._rows.push({
+        name: r.querySelector('.debt-row-name').textContent,
+        balance: r.querySelector('.db').value,
+        rate: r.querySelector('.di').value,
+        minPay: r.querySelector('.dm').value,
+        userPayment: r.querySelector('.dup')?.value || '',
+        extra: r.querySelector('.dsl')?.value || '0',
+      });
+    });
+  }
+}
+function restoreStep(mod) {
+  if (!fd[mod]) return;
+  setTimeout(() => {
+    Object.entries(fd[mod]).forEach(([k,v]) => {
+      if (k === '_rows') return;
+      const el = document.querySelector(`#step-content [data-key="${k}"]`);
+      if (el) el.value = v;
+    });
+    if (mod === 'debt' && fd[mod]._rows && fd[mod]._rows.length) {
+      const c = document.getElementById('debt-rows');
+      if (c) { c.innerHTML = ''; fd[mod]._rows.forEach(r => addDebtRowData(r)); }
+    }
+  }, 15);
+}
+
+// ─── STEP TEMPLATES ─────────────────────────────────────
+const TEMPLATES = {
+  debt: () => `
+    <div class="step-q">💳 Tell me about your debts</div>
+    <div class="step-hint">Add each debt you carry. We'll find the fastest, cheapest payoff path.</div>
+    <div class="sec-label">Strategy &amp; Settings</div>
+    <div class="fg fg2" style="margin-bottom:24px;">
+      <div class="field"><label>Payoff Strategy</label>
+        <select data-key="strategy">
+          <option value="avalanche">Avalanche — Highest Interest First</option>
+          <option value="snowball">Snowball — Smallest Balance First</option>
+        </select>
+      </div>
+      <div class="field"><label>Annual Inflation (MC Median)</label>
+        <select data-key="inflation">
+          <option value="3.23">🟢 Low — 3.23%</option>
+          <option value="3.55">🔵 Mild — 3.55%</option>
+          <option value="3.90" selected>📍 Median — 3.90%</option>
+          <option value="4.25">🟠 Elevated — 4.25%</option>
+          <option value="4.55">🔴 High — 4.55%</option>
+        </select>
+      </div>
+    </div>
+    <div class="sec-label">Your Debts</div>
+    <div id="debt-rows"></div>
+    <button class="add-debt-btn" onclick="addDebtRow()">+ Add Another Debt</button>`,
+
+  loan: () => `
+    <div class="step-q">🏠 Tell me about your loan</div>
+    <div class="step-hint">Enter your mortgage or loan details. We'll break down every payment, month by month.</div>
+    <div class="fg fg2">
+      <div class="field"><label>Loan Amount ($)</label><input type="number" data-key="loanAmt" value="300000"></div>
+      <div class="field"><label>Loan Term (Years)</label><input type="number" data-key="loanYears" value="30"></div>
+      <div class="field"><label>Annual Interest Rate (%)</label><input type="number" data-key="loanRate" value="6.5" step="0.01"></div>
+      <div class="field"><label>Extra Monthly Payment ($)</label><input type="number" data-key="loanExtra" value="0"></div>
+    </div>`,
+
+  cashflow: () => `
+    <div class="step-q">💰 What's your monthly money flow?</div>
+    <div class="step-hint">Enter your income and spending. We'll calculate your net cash position and flag any risks.</div>
+    <div class="sec-label">Income</div>
+    <div class="fg fg2" style="margin-bottom:22px;">
+      <div class="field"><label>Monthly Income ($)</label><input type="number" data-key="cfIncome" value="4500"></div>
+      <div class="field"><label>Other Income ($)</label><input type="number" data-key="cfOther" value="0"></div>
+    </div>
+    <div class="sec-label">Fixed Expenses</div>
+    <div class="fg fg2" style="margin-bottom:22px;">
+      <div class="field"><label>Rent / Mortgage ($)</label><input type="number" data-key="cfRent" value="1400"></div>
+      <div class="field"><label>Utilities ($)</label><input type="number" data-key="cfUtil" value="150"></div>
+      <div class="field"><label>Phone ($)</label><input type="number" data-key="cfPhone" value="80"></div>
+      <div class="field"><label>Insurance ($)</label><input type="number" data-key="cfIns" value="200"></div>
+      <div class="field"><label>Subscriptions ($)</label><input type="number" data-key="cfSubs" value="50"></div>
+    </div>
+    <div class="sec-label">Variable Expenses</div>
+    <div class="fg fg2">
+      <div class="field"><label>Food ($)</label><input type="number" data-key="cfFood" value="400"></div>
+      <div class="field"><label>Transportation ($)</label><input type="number" data-key="cfTransp" value="200"></div>
+      <div class="field"><label>Entertainment ($)</label><input type="number" data-key="cfEnt" value="100"></div>
+      <div class="field"><label>Miscellaneous ($)</label><input type="number" data-key="cfMisc" value="150"></div>
+    </div>`,
+
+  retirement: () => `
+    <div class="step-q">🏖️ Let's plan your retirement</div>
+    <div class="step-hint">We'll project your savings runway and compare Traditional IRA vs Roth IRA after-tax returns — with 2024 limits built in.</div>
+
+    <div class="sec-label">Your Situation</div>
+    <div class="fg fg2" style="margin-bottom:22px;">
+      <div class="field"><label>Current Age</label><input type="number" data-key="retAge" value="30"></div>
+      <div class="field"><label>Retirement Age</label><input type="number" data-key="retRetireAge" value="65"></div>
+      <div class="field"><label>Current Monthly Expenses ($)</label><input type="number" data-key="retExpenses" value="3000"></div>
+      <div class="field"><label>Current Savings ($)</label><input type="number" data-key="retCurrent" value="15000"></div>
+      <div class="field"><label>Monthly Savings Contribution ($)</label><input type="number" data-key="retSavings" value="800"></div>
+      <div class="field"><label>Annual Savings Growth (%)</label><input type="number" data-key="retSavingsGrowth" value="3" step="0.1"></div>
+      <div class="field"><label>Post-Retirement Return (%)</label><input type="number" data-key="retPostReturns" value="4" step="0.1"></div>
+    </div>
+
+    <div class="sec-label">Monte Carlo Assumptions</div>
+    <div class="fg fg2" style="margin-bottom:8px;">
+      <div class="field"><label>Investment Return (S&amp;P 500 MC, 1974-2024)</label>
+        <select data-key="retReturns">
+          <option value="7.04">&#x1F534; Pessimistic 10th pct: 7.04%</option>
+          <option value="9.08">&#x1F7E0; Conservative 25th pct: 9.08%</option>
+          <option value="11.41" selected>&#x1F4CD; Median 50th pct: 11.41%</option>
+          <option value="13.61">&#x1F535; Optimistic 75th pct: 13.61%</option>
+          <option value="15.77">&#x1F7E2; Bull Market 90th pct: 15.77%</option>
+        </select>
+      </div>
+      <div class="field"><label>Annual Inflation (CPI-U MC, 1974-2024)</label>
+        <select data-key="inflation">
+          <option value="3.23">&#x1F7E2; Low 10th pct: 3.23%</option>
+          <option value="3.55">&#x1F535; Mild 25th pct: 3.55%</option>
+          <option value="3.90" selected>&#x1F4CD; Median 50th pct: 3.90%</option>
+          <option value="4.25">&#x1F7E0; Elevated 75th pct: 4.25%</option>
+          <option value="4.55">&#x1F534; High 90th pct: 4.55%</option>
+        </select>
+      </div>
+    </div>
+    <div style="background:rgba(200,245,100,.05);border:1px solid rgba(200,245,100,.15);border-radius:10px;padding:10px 14px;margin-bottom:22px;font-size:11px;color:var(--muted);">
+      Both rates from 10,000 log-normal simulations on 51 years of historical data (1974-2024). Historical S&amp;P mean: 12.78% | CPI mean: 3.95%
+    </div>
+
+    <div class="sec-label">Tax &amp; IRA Details</div>
+    <div class="fg fg2" style="margin-bottom:8px;">
+      <div class="field"><label>Gross Annual Income ($)</label><input type="number" data-key="retIncome" value="80000" placeholder="For Roth eligibility"></div>
+      <div class="field"><label>Filing Status</label>
+        <select data-key="retFiling">
+          <option value="single">Single</option>
+          <option value="mfj">Married Filing Jointly</option>
+        </select>
+      </div>
+      <div class="field"><label>Current Tax Rate (%)</label>
+        <select data-key="retTaxNow">
+          <option value="10">10% — up to $11,600</option>
+          <option value="12">12% — up to $47,150</option>
+          <option value="22" selected>22% — up to $100,525</option>
+          <option value="24">24% — up to $191,950</option>
+          <option value="32">32% — up to $243,725</option>
+          <option value="37">37% — over $609,350</option>
+        </select>
+      </div>
+      <div class="field"><label>Expected Tax Rate in Retirement (%)</label>
+        <select data-key="retTaxRetire">
+          <option value="10">10% — modest withdrawals</option>
+          <option value="12" selected>12% — moderate withdrawals</option>
+          <option value="22">22% — higher withdrawals</option>
+          <option value="24">24% — high income in retirement</option>
+        </select>
+      </div>
+    </div>
+    <div style="background:rgba(123,97,255,.06);border:1px solid rgba(123,97,255,.2);border-radius:10px;padding:10px 14px;font-size:11px;color:var(--muted);line-height:1.7;">
+      <strong style="color:var(--accent2)">2024 IRA Limits:</strong>
+      $7,000/yr under 50 &nbsp;|&nbsp; $8,000/yr age 50+ (catch-up) &nbsp;|&nbsp;
+      Roth phase-out: $146k-$161k (single) / $230k-$240k (MFJ) &nbsp;|&nbsp;
+      RMDs begin age 73 (Traditional IRA only)
+    </div>`,
+  investment: () => `
+    <div class="step-q">📈 How are you investing?</div>
+    <div class="step-hint">Enter your investment details. We'll show compound growth year by year and your final portfolio value.</div>
+    <div class="fg fg2">
+      <div class="field"><label>Initial Investment ($)</label><input type="number" data-key="invInitial" value="10000"></div>
+      <div class="field"><label>Monthly Contribution ($)</label><input type="number" data-key="invMonthly" value="500"></div>
+      <div class="field"><label>Annual Return — Monte Carlo (S&amp;P 500, 1974–2024)</label>
+        <select data-key="invReturn">
+          <option value="7.04">🔴 Pessimistic — 10th pct: 7.04%</option>
+          <option value="9.08">🟠 Conservative — 25th pct: 9.08%</option>
+          <option value="11.41" selected>📍 Median — 50th pct: 11.41% (recommended)</option>
+          <option value="13.61">🔵 Optimistic — 75th pct: 13.61%</option>
+          <option value="15.77">🟢 Bull Market — 90th pct: 15.77%</option>
+          <option value="12.78">📈 Historical Mean: 12.78%</option>
+        </select>
+      </div>
+      <div class="field"><label>Investment Period (Years)</label><input type="number" data-key="invYears" value="30"></div>
+    </div>
+    <div style="background:rgba(123,97,255,.06);border:1px solid rgba(123,97,255,.2);border-radius:10px;padding:12px 14px;margin-top:-8px;margin-bottom:16px;font-size:11px;color:var(--muted);line-height:1.6;">
+      📊 <strong style="color:var(--accent2)">Monte Carlo — S&amp;P 500 Total Return (1974–2024)</strong><br>
+      10,000 log-normal simulations over 30 years using 51 years of annualised returns.<br>
+      Historical mean: <strong style="color:var(--text)">12.78%</strong> &nbsp;|&nbsp; Std dev: <strong style="color:var(--text)">16.99%</strong>
+    </div>`,
+
+  networth: () => `
+    <div class="step-q">🏦 What do you own and owe?</div>
+    <div class="step-hint">List your assets and liabilities. We'll calculate your net worth and debt-to-asset ratio.</div>
+    <div class="sec-label">Assets</div>
+    <div class="fg fg2" style="margin-bottom:22px;">
+      <div class="field"><label>Checking Account ($)</label><input type="number" data-key="nwChecking" value="3500"></div>
+      <div class="field"><label>Savings Account ($)</label><input type="number" data-key="nwSavings" value="12000"></div>
+      <div class="field"><label>Emergency Fund ($)</label><input type="number" data-key="nwEmergency" value="15000"></div>
+      <div class="field"><label>401k / Retirement ($)</label><input type="number" data-key="nw401k" value="45000"></div>
+      <div class="field"><label>Roth IRA ($)</label><input type="number" data-key="nwRoth" value="18000"></div>
+      <div class="field"><label>Brokerage Account ($)</label><input type="number" data-key="nwBrokerage" value="12000"></div>
+      <div class="field"><label>Primary Residence ($)</label><input type="number" data-key="nwHome" value="350000"></div>
+      <div class="field"><label>Vehicles ($)</label><input type="number" data-key="nwVehicles" value="22000"></div>
+    </div>
+    <div class="sec-label">Liabilities</div>
+    <div class="fg fg2">
+      <div class="field"><label>Credit Card Debt ($)</label><input type="number" data-key="nwCC" value="7000"></div>
+      <div class="field"><label>Medical Debt ($)</label><input type="number" data-key="nwMedical" value="3200"></div>
+      <div class="field"><label>Student Loans ($)</label><input type="number" data-key="nwStudent" value="60000"></div>
+      <div class="field"><label>Auto Loan ($)</label><input type="number" data-key="nwAuto" value="18500"></div>
+      <div class="field"><label>Mortgage ($)</label><input type="number" data-key="nwMortgage" value="285000"></div>
+    </div>`,
+};
+
+// ─── DEBT ROWS ───────────────────────────────────────────
+function addDebtRow() { addDebtRowData({ name: DEBT_NAMES[debtRowCount % DEBT_NAMES.length], balance:'', rate:'', minPay:'', userPayment:'', extra:'0' }); }
+function addDebtRowData(d) {
+  debtRowCount++;
+  const id = 'dr-'+debtRowCount;
+  const el = document.createElement('div');
+  el.className = 'debt-row'; el.id = id;
+  el.innerHTML = `<div class="debt-row-hdr"><span class="debt-row-name">${d.name}</span><button class="rm-debt" onclick="rmDebt('${id}')">✕</button></div>
+    <div class="drg">
+      <div class="field"><label>Balance ($)</label><input type="number" class="db" value="${d.balance||''}" placeholder="0"></div>
+      <div class="field"><label>Interest Rate (%)</label><input type="number" class="di" value="${d.rate||''}" placeholder="0" step="0.01"></div>
+      <div class="field"><label>Min. Payment ($)</label><input type="number" class="dm" value="${d.minPay||''}" placeholder="0"></div>
+      <div class="field"><label>My Monthly Payment ($)</label><input type="number" class="dup" value="${d.userPayment||''}" placeholder="Leave blank = min only"></div>
+    </div>
+    <div style="margin-top:8px;padding:8px 10px;background:rgba(200,245,100,.05);border-radius:8px;border:1px solid rgba(200,245,100,.12);">
+      <div style="font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">Extra Payment Slider</div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <input type="range" class="dsl" min="0" max="2000" step="25" value="${d.extra||0}"
+          oninput="syncDebtSlider(this)" style="flex:1">
+        <span class="dsl-val" style="font-family:'DM Mono',monospace;font-size:13px;color:var(--accent);min-width:54px;text-align:right;">$${parseFloat(d.extra||0).toLocaleString('en-US',{maximumFractionDigits:0})}</span>
+      </div>
+      <div style="font-size:10px;color:var(--muted);margin-top:4px;">Extra on top of your monthly payment, applied to priority debt</div>
+    </div>`;
+  const c = document.getElementById('debt-rows');
+  if (c) c.appendChild(el);
+}
+
+function syncDebtSlider(slider) {
+  const val = parseFloat(slider.value) || 0;
+  const row = slider.closest('.debt-row');
+  row.querySelector('.dsl-val').textContent = '$' + val.toLocaleString('en-US', {maximumFractionDigits:0});
+}
+function rmDebt(id) {
+  const rows = document.querySelectorAll('#debt-rows .debt-row');
+  if (rows.length > 1) document.getElementById(id)?.remove();
+}
+
+// ─── HELPERS ────────────────────────────────────────────
+const fmt    = v => '$' + Math.abs(v).toLocaleString('en-US',{maximumFractionDigits:0});
+const fmtPct = v => (v*100).toFixed(1)+'%';
+const gd     = (mod, key, def=0) => parseFloat(fd[mod]?.[key]) || def;
+
+// ─── BUILD RESULTS ──────────────────────────────────────
+function buildResults() {
+  show('s-results');
+  const container = document.getElementById('results-container');
+  container.innerHTML = '';
+  const cards = [];
+  let totalMin = 0;
+
+  // ── DEBT ──
+  if (selected.includes('debt')) {
+    const rows = fd.debt?._rows || [];
+    const debts = rows.map(r => ({
+      name: r.name,
+      balance: parseFloat(r.balance)||0,
+      rate: (parseFloat(r.rate)||0)/100,
+      minPay: parseFloat(r.minPay)||0,
+      // userPayment: what user wants to pay; must be >= minPay; 0/blank = use minPay only
+      userPayment: parseFloat(r.userPayment)||0,
+      extra: parseFloat(r.extra)||0,
+    })).filter(d => d.balance > 0);
+
+    const strategy = fd.debt?.strategy || 'avalanche';
+    const tDebt = debts.reduce((s,d)=>s+d.balance, 0);
+    // effective scheduled payment per debt = max(minPay, userPayment)
+    totalMin = debts.reduce((s,d)=>s+Math.max(d.minPay, d.userPayment||d.minPay), 0);
+    const tExtra = debts.reduce((s,d)=>s+d.extra, 0);
+
+    // Weighted average rate
+    const wRate = tDebt > 0 ? debts.reduce((s,d)=>s+d.balance*d.rate, 0)/tDebt : 0;
+
+    // Sort order for priority (avalanche = highest rate first, snowball = lowest balance first)
+    const sortedPriority = strategy === 'avalanche'
+      ? [...debts].sort((a,b) => b.rate - a.rate)
+      : [...debts].sort((a,b) => a.balance - b.balance);
+
+    // Working copies
+    let working = debts.map(d => ({ ...d, bal: d.balance }));
+
+    let mo = 0, totInt = 0;
+
+    while (working.some(d => d.bal > 0) && mo < 600) {
+      mo++;
+
+      // Step 1 — interest accrues on full balance BEFORE payment (end-of-month model)
+      working.forEach(d => {
+        if (d.bal <= 0) return;
+        const interest = d.bal * d.rate / 12;   // interest on outstanding balance
+        d.bal += interest;                        // balance grows first
+        totInt += interest;
+      });
+
+      // Step 2 — apply each debt's scheduled payment at end of month
+      let freedUp = 0;
+      working.forEach(d => {
+        if (d.bal <= 0) return;
+        const scheduled = Math.max(d.minPay, d.userPayment || d.minPay);
+        const paid = Math.min(scheduled, d.bal);  // can't overpay
+        d.bal = Math.max(0, d.bal - paid);
+        if (d.bal === 0) freedUp += (scheduled - paid); // this debt is cleared — recapture leftover
+      });
+
+      // Step 3 — apply extra payment + freed-up cash to priority debt
+      let pooledExtra = tExtra + freedUp;
+      for (const sp of sortedPriority) {
+        const target = working.find(w => w.name === sp.name && w.bal > 0);
+        if (target) {
+          const apply = Math.min(pooledExtra, target.bal);
+          target.bal = Math.max(0, target.bal - apply);
+          break; // only one priority debt at a time
+        }
+      }
+    }
+
+    const intSavedVsMinOnly = (() => {
+      // baseline: everyone pays minimum only, no extra
+      let bWorking = debts.map(d => ({ ...d, bal: d.balance }));
+      let bMo = 0, bInt = 0;
+      while (bWorking.some(d => d.bal > 0) && bMo < 600) {
+        bMo++;
+        bWorking.forEach(d => {
+          if (d.bal <= 0) return;
+          const interest = d.bal * d.rate / 12;
+          d.bal += interest; bInt += interest;
+          d.bal = Math.max(0, d.bal - Math.min(d.minPay, d.bal));
+        });
+      }
+      return bInt - totInt;
+    })();
+
+    cards.push({section:'debt', title:'Debt Repayment', icon:'💳', color:'#ff6b6b',
+      body:`<div class="big-metric">
+          <div class="big-metric-value" style="color:var(--accent)">${Math.floor(mo/12)>0?Math.floor(mo/12)+'y ':''} ${mo%12}m</div>
+          <div class="big-metric-label">Estimated Payoff Time (end-of-month)</div>
+        </div>
+        <div class="metric-row"><span class="metric-label">Total Debt</span><span class="metric-value negative">${fmt(tDebt)}</span></div>
+        <div class="metric-row"><span class="metric-label">Weighted Avg Rate</span><span class="metric-value warn">${fmtPct(wRate)}</span></div>
+        <div class="metric-row"><span class="metric-label">Total Scheduled / mo</span><span class="metric-value">${fmt(totalMin)}</span></div>
+        <div class="metric-row"><span class="metric-label">Total Interest to Pay</span><span class="metric-value negative">${fmt(totInt)}</span></div>
+        ${intSavedVsMinOnly>0?`<div class="metric-row"><span class="metric-label">Interest Saved vs Min-Only</span><span class="metric-value positive">${fmt(intSavedVsMinOnly)}</span></div>`:''}
+        <div class="metric-row"><span class="metric-label">Strategy</span><span class="metric-value accent2">${strategy==='avalanche'?'Avalanche':'Snowball'}</span></div>
+        <div style="margin-top:16px">
+          <table class="dt">
+            <thead><tr><th>Debt</th><th>Balance</th><th>Rate</th><th>Min Pay</th><th>My Payment</th></tr></thead>
+            <tbody>
+            ${debts.map(d=>{
+              const myPay = d.userPayment > d.minPay ? d.userPayment : d.minPay;
+              const isAboveMin = d.userPayment > d.minPay;
+              return `<tr>
+                <td>${d.name}</td>
+                <td>${fmt(d.balance)}</td>
+                <td>${fmtPct(d.rate)}</td>
+                <td>${fmt(d.minPay)}</td>
+                <td style="color:${isAboveMin?'var(--success)':'var(--muted)'}">${fmt(myPay)}${isAboveMin?' ↑':''}</td>
+              </tr>`;
+            }).join('')}
+            </tbody>
+          </table>
+        </div>`,
+      calc:`<div class="comp-step"><span class="var">Model</span>: Interest accrues on full balance first, payment applied at end of month</div>
+        <div class="comp-step"><span class="var">Total Debt</span> = ${debts.map(d=>fmt(d.balance)).join(' + ')} = <span class="val">${fmt(tDebt)}</span></div>
+        <div class="comp-step"><span class="var">Weighted Avg Rate</span> = Σ(Balance × Rate) / Total Debt = <span class="val">${fmtPct(wRate)}</span></div>
+        <div class="comp-step"><span class="var">Per debt each month</span>: bal += bal × rate/12 → then pay max(minPay, userPayment), capped at balance</div>
+        <div class="comp-step"><span class="var">Extra + freed payments</span> cascade to priority debt (${strategy==='avalanche'?'highest rate':'smallest balance'} first)</div>
+        <div class="comp-step"><span class="var">Simulation result</span>: <span class="val">${mo} months to full payoff</span></div>
+        <div class="comp-step"><span class="var">Total Interest Paid</span> = <span class="val">${fmt(totInt)}</span></div>
+        ${intSavedVsMinOnly>0?`<div class="comp-step"><span class="var">Saved vs minimum-only path</span> = <span class="val">${fmt(intSavedVsMinOnly)}</span></div>`:''}`,
+    });
+  }
+
+  // ── LOAN ──
+  if (selected.includes('loan')) {
+    const la=gd('loan','loanAmt',300000), ly=gd('loan','loanYears',30), lr=gd('loan','loanRate',6.5)/100, le=gd('loan','loanExtra',0);
+    const mr=lr/12, n=ly*12;
+    const pmt=mr>0?la*mr*Math.pow(1+mr,n)/(Math.pow(1+mr,n)-1):la/n;
+    const tot=pmt+le; let bal=la, lm=0, lInt=0; const ar=[];
+    while(bal>0.01&&lm<n*2){lm++;const i=bal*mr;const p=Math.min(tot-i,bal);lInt+=i;bal=Math.max(0,bal-p);if(ar.length<12)ar.push({m:lm,pay:tot,int:i,prin:p,end:bal});}
+    const saved=(pmt*n)-(tot*lm);
+    cards.push({section:'debt',title:'Loan Amortization',icon:'🏠',color:'#7b61ff',
+      body:`<div class="big-metric"><div class="big-metric-value" style="color:var(--accent2)">${fmt(pmt)}<span style="font-family:Syne;font-size:16px;color:var(--muted)">/mo</span></div><div class="big-metric-label">Monthly Payment</div></div>
+        <div class="metric-row"><span class="metric-label">Loan Amount</span><span class="metric-value">${fmt(la)}</span></div>
+        <div class="metric-row"><span class="metric-label">Total Interest</span><span class="metric-value negative">${fmt(lInt)}</span></div>
+        <div class="metric-row"><span class="metric-label">Payoff Time</span><span class="metric-value accent">${Math.floor(lm/12)}y ${lm%12}m</span></div>
+        ${le>0?`<div class="metric-row"><span class="metric-label">Interest Saved w/ Extra</span><span class="metric-value positive">${fmt(saved)}</span></div>`:''}
+        <div style="margin-top:14px;font-size:11px;color:var(--muted);margin-bottom:6px;">First 12 months</div>
+        <div class="amort-scroll"><table class="dt"><thead><tr><th>#</th><th>Payment</th><th>Interest</th><th>Principal</th><th>Balance</th></tr></thead><tbody>
+        ${ar.map(r=>`<tr><td>${r.m}</td><td>${fmt(r.pay)}</td><td>${fmt(r.int)}</td><td>${fmt(r.prin)}</td><td>${fmt(r.end)}</td></tr>`).join('')}
+        </tbody></table></div>`,
+      calc:`<div class="comp-step"><span class="var">Monthly Payment</span> = P×[r(1+r)^n]/[(1+r)^n−1] = <span class="val">${fmt(pmt)}/mo</span></div>
+        <div class="comp-step"><span class="var">Total Cost (no extra)</span> = ${fmt(pmt)} × ${n} = <span class="val">${fmt(pmt*n)}</span></div>
+        <div class="comp-step"><span class="var">Total Interest</span> = <span class="val">${fmt(lInt)}</span></div>`,
+    });
+  }
+
+  // ── CASHFLOW ──
+  if (selected.includes('cashflow')) {
+    const cfInc=gd('cashflow','cfIncome',4500)+gd('cashflow','cfOther',0);
+    const fixExp=gd('cashflow','cfRent',0)+gd('cashflow','cfUtil',0)+gd('cashflow','cfPhone',0)+gd('cashflow','cfIns',0)+gd('cashflow','cfSubs',0);
+    const varExp=gd('cashflow','cfFood',0)+gd('cashflow','cfTransp',0)+gd('cashflow','cfEnt',0)+gd('cashflow','cfMisc',0);
+    const dPay=totalMin, totExp=fixExp+varExp+dPay, netCF=cfInc-totExp;
+    const pF=cfInc>0?fixExp/cfInc:0, pV=cfInc>0?varExp/cfInc:0, pD=cfInc>0?dPay/cfInc:0;
+    const dRisk=pD>0.35?'High':pD>0.2?'Moderate':'Low';
+    cards.push({section:'cashflow',title:'Cash Flow',icon:'💰',color:'#ffd166',
+      body:`<div class="big-metric"><div class="big-metric-value" style="color:${netCF>=0?'var(--success)':'var(--danger)'}">${netCF>=0?'+':''}${fmt(netCF)}</div><div class="big-metric-label">Net Monthly Cash Flow</div></div>
+        <div style="display:flex;gap:8px;margin:8px 0 16px">
+          <span class="stat-badge ${netCF>=0?'good':'bad'}">${netCF>=0?'Surplus':'Deficit'}</span>
+          <span class="stat-badge ${dRisk==='Low'?'good':dRisk==='Moderate'?'warn':'bad'}">Debt Risk: ${dRisk}</span>
+        </div>
+        <div class="metric-row"><span class="metric-label">Total Income</span><span class="metric-value positive">${fmt(cfInc)}</span></div>
+        <div class="metric-row"><span class="metric-label">Fixed Expenses</span><span class="metric-value">${fmt(fixExp)}</span></div>
+        <div class="metric-row"><span class="metric-label">Variable Expenses</span><span class="metric-value">${fmt(varExp)}</span></div>
+        <div class="metric-row"><span class="metric-label">Total Expenses</span><span class="metric-value negative">${fmt(totExp)}</span></div>
+        <div style="margin-top:14px">
+          <div class="pbar-wrap"><div class="pbar-label"><span>% Fixed (${fmtPct(pF)})</span><span>target &lt;50%</span></div><div class="pbar"><div class="pbar-fill" style="width:${Math.min(pF*100,100)}%;background:${pF<0.5?'var(--success)':'var(--danger)'}"></div></div></div>
+          <div class="pbar-wrap"><div class="pbar-label"><span>% Variable (${fmtPct(pV)})</span><span>target &lt;30%</span></div><div class="pbar"><div class="pbar-fill" style="width:${Math.min(pV*100,100)}%;background:${pV<0.3?'var(--success)':'var(--accent4)'}"></div></div></div>
+          <div class="pbar-wrap"><div class="pbar-label"><span>% Debt (${fmtPct(pD)})</span><span>target &lt;20%</span></div><div class="pbar"><div class="pbar-fill" style="width:${Math.min(pD*100,100)}%;background:${pD<0.2?'var(--success)':pD<0.35?'var(--accent4)':'var(--danger)'}"></div></div></div>
+        </div>`,
+      calc:`<div class="comp-step"><span class="var">Income</span> = <span class="val">${fmt(cfInc)}</span></div>
+        <div class="comp-step"><span class="var">Fixed</span> = Rent+Util+Phone+Ins+Subs = <span class="val">${fmt(fixExp)}</span></div>
+        <div class="comp-step"><span class="var">Variable</span> = Food+Transport+Ent+Misc = <span class="val">${fmt(varExp)}</span></div>
+        <div class="comp-step"><span class="var">Net CF</span> = ${fmt(cfInc)} − ${fmt(totExp)} = <span class="val">${netCF>=0?'+':''}${fmt(netCF)}</span></div>`,
+    });
+  }
+
+  // ── RETIREMENT ──
+  if (selected.includes('retirement')) {
+    // ── Inputs ──────────────────────────────────────────────
+    const rAge    = gd('retirement','retAge',30);
+    const rRetire = gd('retirement','retRetireAge',65);
+    const rExp    = gd('retirement','retExpenses',3000);
+    const rSav    = gd('retirement','retSavings',800);
+    const rGr     = gd('retirement','retSavingsGrowth',3);
+    const rR      = gd('retirement','retReturns',11.41) / 100;
+    const rPR     = gd('retirement','retPostReturns',4)  / 100;
+    const rCur    = gd('retirement','retCurrent',15000);
+    const inf     = gd('retirement','inflation',3.90)    / 100;
+    const income  = gd('retirement','retIncome',80000);
+    const taxNow  = gd('retirement','retTaxNow',22)      / 100;
+    const taxRet  = gd('retirement','retTaxRetire',12)   / 100;
+    const filing  = fd.retirement?.retFiling || 'single';
+    const ytr     = rRetire - rAge;
+
+    // ── 2024 IRA limits ──────────────────────────────────────
+    const IRA_LIMIT     = rAge >= 50 ? 8000 : 7000;
+    const ROTH_LO       = filing === 'mfj' ? 230000 : 146000;
+    const ROTH_HI       = filing === 'mfj' ? 240000 : 161000;
+    const rothFrac      = income <= ROTH_LO ? 1 :
+                          income >= ROTH_HI ? 0 :
+                          1 - (income - ROTH_LO) / (ROTH_HI - ROTH_LO);
+    const maxRothYr     = IRA_LIMIT * rothFrac;
+    const maxTradYr     = IRA_LIMIT;
+
+    // ── Accumulation phase ───────────────────────────────────
+    // Three buckets: Traditional IRA, Roth IRA, General savings
+    let portTrad = 0, portRoth = 0, portGen = rCur;
+    let monthlySav = rSav;
+    const mr = rR / 12;
+
+    // Chart data
+    const chartAges = [], chartTrad = [], chartRoth = [], chartGen = [];
+
+    for (let y = 0; y < ytr; y++) {
+      const ageNow   = rAge + y;
+      const lim      = ageNow >= 50 ? 8000 : 7000;
+      const rFrac    = income <= ROTH_LO ? 1 : income >= ROTH_HI ? 0 :
+                       1 - (income - ROTH_LO) / (ROTH_HI - ROTH_LO);
+      const rothMo   = Math.min(monthlySav, lim * rFrac / 12);
+      const tradMo   = Math.min(monthlySav, lim / 12);
+      const genMo    = Math.max(0, monthlySav - tradMo);
+
+      for (let m = 0; m < 12; m++) {
+        portTrad = portTrad * (1 + mr) + tradMo;
+        portRoth = portRoth * (1 + mr) + rothMo;
+        portGen  = portGen  * (1 + mr) + genMo;
+      }
+      monthlySav *= (1 + rGr / 100);
+      chartAges.push(ageNow + 1);
+      chartTrad.push(Math.round(portTrad));
+      chartRoth.push(Math.round(portRoth));
+      chartGen.push(Math.round(portGen));
+    }
+
+    // ── After-tax values ────────────────────────────────────
+    const tradAfterTax  = portTrad * (1 - taxRet);     // pay tax on withdrawal
+    const rothAfterTax  = portRoth;                     // tax-free (already post-tax)
+    const genAfterTax   = portGen  * (1 - taxRet * 0.5); // approx cap gains blend
+    const totalGross    = portTrad + portRoth + portGen;
+    const totalAfterTax = tradAfterTax + rothAfterTax + genAfterTax;
+
+    // ── Inflation & withdrawal ───────────────────────────────
+    const inflAdjExp  = rExp  * Math.pow(1 + inf, ytr);
+    const annualW     = inflAdjExp * 12;
+    const wr          = totalGross > 0 ? annualW / totalGross : 9;
+    const target4     = annualW / 0.04;
+
+    // ── RMD at 73 (Traditional IRA only) ────────────────────
+    const yrsToRmd    = Math.max(0, 73 - rRetire);
+    const tradAtRmd   = portTrad * Math.pow(1 + rPR, yrsToRmd);
+    // IRS Uniform Lifetime Table factor for age 73 = 26.5
+    const rmdAmount   = tradAtRmd / 26.5;
+
+    // ── Depletion ────────────────────────────────────────────
+    let bal = totalGross, depYrs = 0;
+    while (bal > 0 && depYrs < 50) { bal = bal * (1 + rPR) - annualW; depYrs++; }
+
+    // ── Roth advantage (if eligible) ────────────────────────
+    const rothAdvantage = rothAfterTax - tradAfterTax;
+
+    cards.push({section:'retirement', title:'Retirement', icon:'🏖️', color:'#c8f564',
+      _chartData: { chartAges, chartTrad, chartRoth, chartGen },
+      body:`
+        <div class="big-metric">
+          <div class="big-metric-value" style="color:var(--accent)">${fmt(totalGross)}</div>
+          <div class="big-metric-label">Total Portfolio at Retirement (Age ${rRetire})</div>
+        </div>
+
+        <!-- IRA Comparison strip -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0;">
+          <div style="background:rgba(123,97,255,.1);border:1px solid rgba(123,97,255,.25);border-radius:12px;padding:12px 14px;">
+            <div style="font-size:10px;color:var(--accent2);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">Traditional IRA</div>
+            <div style="font-family:'DM Serif Display',serif;font-size:22px;color:var(--text)">${fmt(portTrad)}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">Gross value</div>
+            <div style="font-family:'DM Mono',monospace;font-size:13px;color:var(--accent4);margin-top:6px;">${fmt(tradAfterTax)} after tax</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px;">Taxed at ${(taxRet*100).toFixed(0)}% on withdrawal</div>
+            ${rmdAmount>0?`<div style="font-size:10px;color:var(--danger);margin-top:4px;">RMD at 73: ${fmt(rmdAmount)}/yr</div>`:''}
+          </div>
+          <div style="background:rgba(200,245,100,.08);border:1px solid rgba(200,245,100,.25);border-radius:12px;padding:12px 14px;">
+            <div style="font-size:10px;color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">Roth IRA</div>
+            <div style="font-family:'DM Serif Display',serif;font-size:22px;color:var(--text)">${fmt(portRoth)}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;">${rothFrac<1?`${(rothFrac*100).toFixed(0)}% eligible (income limit)`:'Fully eligible'}</div>
+            <div style="font-family:'DM Mono',monospace;font-size:13px;color:var(--success);margin-top:6px;">${fmt(rothAfterTax)} after tax</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px;">Tax-free withdrawals. No RMDs.</div>
+            ${rothAdvantage>0?`<div style="font-size:10px;color:var(--success);margin-top:4px;">+${fmt(rothAdvantage)} vs Trad after-tax</div>`:''}
+          </div>
+        </div>
+
+        <div class="metric-row"><span class="metric-label">General Savings</span><span class="metric-value">${fmt(portGen)}</span></div>
+        <div class="metric-row"><span class="metric-label">Total After-Tax Value</span><span class="metric-value positive">${fmt(totalAfterTax)}</span></div>
+        <div class="metric-row"><span class="metric-label">Inflation-Adj Expenses/mo</span><span class="metric-value warn">${fmt(inflAdjExp)}</span></div>
+        <div class="metric-row"><span class="metric-label">Annual Withdrawal Needed</span><span class="metric-value">${fmt(annualW)}</span></div>
+        <div class="metric-row"><span class="metric-label">Withdrawal Rate</span><span class="metric-value ${wr<=0.04?'positive':'negative'}">${fmtPct(wr)}</span></div>
+        <div class="metric-row"><span class="metric-label">Portfolio Sustains</span><span class="metric-value accent">${bal>0?'50+ years':'~'+depYrs+' years'}</span></div>
+        <div class="metric-row"><span class="metric-label">Target (4% rule)</span><span class="metric-value accent2">${fmt(target4)}</span></div>
+        <div class="metric-row"><span class="metric-label">2024 IRA Limit</span><span class="metric-value">${fmt(IRA_LIMIT)}/yr ${rAge>=50?'(catch-up)':''}</span></div>
+        <div class="metric-row"><span class="metric-label">Max Roth Contribution</span><span class="metric-value ${rothFrac<1?'warn':'accent'}">${fmt(maxRothYr)}/yr (${(rothFrac*100).toFixed(0)}% eligible)</span></div>
+
+        <div style="margin-top:14px">
+          <div class="pbar-wrap"><div class="pbar-label"><span>Progress to 4% Target</span><span>${fmtPct(Math.min(totalGross/target4,1))}</span></div>
+            <div class="pbar"><div class="pbar-fill" style="width:${Math.min(totalGross/target4*100,100)}%;background:var(--accent)"></div></div>
+          </div>
+        </div>
+
+        <div style="margin-top:16px"><canvas id="ret-ira-chart" height="180"></canvas></div>`,
+
+      calc:`
+        <div class="comp-step"><span class="var">Years to Retire</span> = ${rRetire}-${rAge} = <span class="val">${ytr} yrs</span></div>
+        <div class="comp-step"><span class="var">MC Return used</span> = <span class="val">${(rR*100).toFixed(2)}% (S&P 500 50th pct)</span></div>
+        <div class="comp-step"><span class="var">MC Inflation used</span> = <span class="val">${(inf*100).toFixed(2)}% (CPI-U 50th pct)</span></div>
+        <div class="comp-step"><span class="var">Trad IRA</span>: grow ${fmt(Math.min(rSav, IRA_LIMIT/12))}/mo × ${ytr}y at ${(rR*100).toFixed(2)}% = <span class="val">${fmt(portTrad)} gross → ${fmt(tradAfterTax)} after ${(taxRet*100).toFixed(0)}% tax</span></div>
+        <div class="comp-step"><span class="var">Roth IRA</span>: ${rothFrac<1?`only ${(rothFrac*100).toFixed(0)}% eligible due to income — `:'fully eligible — '}grow tax-free = <span class="val">${fmt(portRoth)} (no withdrawal tax)</span></div>
+        <div class="comp-step"><span class="var">Traditional IRA RMD</span> at age 73: portfolio grows at post-retirement rate for ${Math.max(0,73-rRetire)} yrs → <span class="val">${fmt(rmdAmount)}/yr minimum withdrawal</span></div>
+        <div class="comp-step"><span class="var">Infl-Adj Expenses</span> = ${fmt(rExp)} × (1+${(inf*100).toFixed(2)}%)^${ytr} = <span class="val">${fmt(inflAdjExp)}/mo</span></div>
+        <div class="comp-step"><span class="var">Withdrawal Rate</span> = ${fmt(annualW)} / ${fmt(totalGross)} = <span class="val">${fmtPct(wr)}</span></div>`,
+    });
+  }
+
+  // ── INVESTMENT ──
+  if (selected.includes('investment')) {
+    const iI=gd('investment','invInitial',10000), iM=gd('investment','invMonthly',500);
+    const iR=gd('investment','invReturn',8)/100, iY=gd('investment','invYears',30);
+    const mr=iR/12, n=iY*12; let fv=iI;
+    for(let m=0;m<n;m++) fv=fv*(1+mr)+iM;
+    const tI=iI+iM*n, tG=fv-tI;
+    cards.push({section:'investment',title:'Investment Growth',icon:'📈',color:'#4ade80',
+      body:`<div class="big-metric"><div class="big-metric-value" style="color:var(--success)">${fmt(fv)}</div><div class="big-metric-label">Final Portfolio in ${iY} Years</div></div>
+        <div class="metric-row"><span class="metric-label">Total Contributed</span><span class="metric-value">${fmt(tI)}</span></div>
+        <div class="metric-row"><span class="metric-label">Total Gains</span><span class="metric-value positive">${fmt(tG)}</span></div>
+        <div class="metric-row"><span class="metric-label">Return on Principal</span><span class="metric-value accent">${fmtPct(tI>0?tG/tI:0)}</span></div>
+        <div class="metric-row"><span class="metric-label">Monthly Contribution</span><span class="metric-value">${fmt(iM)}</span></div>
+        <div class="metric-row"><span class="metric-label">Annual Return</span><span class="metric-value accent2">${fmtPct(iR)}</span></div>
+        <div style="margin-top:14px"><canvas id="inv-chart" height="160"></canvas></div>`,
+      calc:`<div class="comp-step"><span class="var">Monthly Rate</span> = ${fmtPct(iR)}/12 = <span class="val">${(iR/12*100).toFixed(4)}%</span></div>
+        <div class="comp-step"><span class="var">FV</span> = P×(1+r)^n + PMT×[(1+r)^n−1]/r = <span class="val">${fmt(fv)}</span></div>
+        <div class="comp-step"><span class="var">Total Gains</span> = ${fmt(fv)} − ${fmt(tI)} = <span class="val">${fmt(tG)}</span></div>`,
+      _inv:{iI,iM,iR,iY}
+    });
+  }
+
+  // ── NET WORTH ──
+  if (selected.includes('networth')) {
+    const liq=gd('networth','nwChecking',0)+gd('networth','nwSavings',0)+gd('networth','nwEmergency',0);
+    const inv2=gd('networth','nw401k',0)+gd('networth','nwRoth',0)+gd('networth','nwBrokerage',0);
+    const phy=gd('networth','nwHome',0)+gd('networth','nwVehicles',0);
+    const tA=liq+inv2+phy, sL=gd('networth','nwCC',0)+gd('networth','nwMedical',0);
+    const lL=gd('networth','nwStudent',0)+gd('networth','nwAuto',0)+gd('networth','nwMortgage',0);
+    const tL=sL+lL, nw=tA-tL, d2a=tA>0?tL/tA:0;
+    cards.push({section:'networth',title:'Net Worth',icon:'🏦',color:'#f472b6',
+      body:`<div class="big-metric"><div class="big-metric-value" style="color:${nw>=0?'var(--accent)':'var(--danger)'}">${nw>=0?'+':''}${fmt(nw)}</div><div class="big-metric-label">Net Worth</div></div>
+        <div class="metric-row"><span class="metric-label">Liquid Assets</span><span class="metric-value positive">${fmt(liq)}</span></div>
+        <div class="metric-row"><span class="metric-label">Invested Assets</span><span class="metric-value positive">${fmt(inv2)}</span></div>
+        <div class="metric-row"><span class="metric-label">Physical Assets</span><span class="metric-value positive">${fmt(phy)}</span></div>
+        <div class="metric-row"><span class="metric-label">Total Assets</span><span class="metric-value positive">${fmt(tA)}</span></div>
+        <div class="metric-row"><span class="metric-label">Short-Term Liabilities</span><span class="metric-value negative">${fmt(sL)}</span></div>
+        <div class="metric-row"><span class="metric-label">Long-Term Liabilities</span><span class="metric-value negative">${fmt(lL)}</span></div>
+        <div class="metric-row"><span class="metric-label">Total Liabilities</span><span class="metric-value negative">${fmt(tL)}</span></div>
+        <div class="metric-row"><span class="metric-label">Debt-to-Asset Ratio</span><span class="metric-value ${d2a<0.5?'positive':'negative'}">${fmtPct(d2a)}</span></div>`,
+      calc:`<div class="comp-step"><span class="var">Total Assets</span> = ${fmt(liq)} + ${fmt(inv2)} + ${fmt(phy)} = <span class="val">${fmt(tA)}</span></div>
+        <div class="comp-step"><span class="var">Total Liabilities</span> = ${fmt(sL)} + ${fmt(lL)} = <span class="val">${fmt(tL)}</span></div>
+        <div class="comp-step"><span class="var">Net Worth</span> = ${fmt(tA)} − ${fmt(tL)} = <span class="val">${nw>=0?'+':''}${fmt(nw)}</span></div>`,
+    });
+  }
+
+  // render cards
+  cards.forEach((c,i) => {
+    const card = document.createElement('div');
+    card.className = 'result-card'; card.dataset.section = c.section;
+    card.innerHTML = `<div class="rcard-hdr"><div class="rcard-title"><div class="rcard-icon" style="background:${c.color}22;color:${c.color}">${c.icon}</div>${c.title}</div>
+      <button class="show-calc-btn" id="scb-${i}" onclick="toggleCalc(${i})">SHOW CALC</button></div>
+      <div class="rcard-body">${c.body}</div>
+      <div class="comp-panel" id="cp-${i}">${c.calc}</div>`;
+    container.appendChild(card);
+  });
+
+  // nav
+  const secNames={debt:'Debt',cashflow:'Cash Flow',retirement:'Retirement',investment:'Investment',networth:'Net Worth'};
+  const secs=[...new Set(cards.map(c=>c.section))];
+  let navHtml=`<button class="nav-tab active" onclick="filterSec('all',this)">All</button>`;
+  secs.forEach(s=>{if(secNames[s])navHtml+=`<button class="nav-tab" onclick="filterSec('${s}',this)">${secNames[s]}</button>`;});
+  document.getElementById('results-nav').innerHTML=navHtml;
+
+  // IRA comparison chart
+  const retCard = cards.find(c=>c._chartData);
+  setTimeout(()=>{
+    const rctx = document.getElementById('ret-ira-chart');
+    if (rctx && retCard) {
+      const {chartAges, chartTrad, chartRoth, chartGen} = retCard._chartData;
+      new Chart(rctx, {type:'line', data:{
+        labels: chartAges,
+        datasets:[
+          {label:'Traditional IRA (gross)', data:chartTrad, borderColor:'#7b61ff', backgroundColor:'rgba(123,97,255,.08)', fill:true,  tension:.4, pointRadius:0},
+          {label:'Roth IRA',                data:chartRoth, borderColor:'#c8f564', backgroundColor:'rgba(200,245,100,.06)', fill:true,  tension:.4, pointRadius:0},
+          {label:'General Savings',          data:chartGen,  borderColor:'#6b6b8a', borderDash:[4,4],                        fill:false, tension:.4, pointRadius:0},
+        ]
+      }, options:{
+        responsive:true,
+        plugins:{
+          legend:{labels:{color:'#6b6b8a', font:{family:'DM Mono',size:10}}},
+          title:{display:true, text:'Portfolio Growth by Account Type', color:'#6b6b8a', font:{family:'Syne',size:11}}
+        },
+        scales:{
+          x:{ticks:{color:'#6b6b8a',font:{size:9},maxTicksLimit:10}, grid:{color:'rgba(255,255,255,.04)'}},
+          y:{ticks:{color:'#6b6b8a',font:{size:9},callback:v=>'$'+Math.round(v/1000)+'k'}, grid:{color:'rgba(255,255,255,.04)'}}
+        }
+      }});
+    }
+  }, 100);
+
+  // investment chart
+  const invCard = cards.find(c=>c._inv);
+  setTimeout(()=>{
+    const ctx=document.getElementById('inv-chart'); if(!ctx||!invCard)return;
+    const {iI,iM,iR,iY}=invCard._inv;
+    const labels=[],contrib=[],portL=[]; let bal=iI,con=iI,mr=iR/12;
+    for(let y=0;y<=iY;y++){labels.push(y===0?'Now':`Yr ${y}`);contrib.push(con);portL.push(Math.round(bal));if(y<iY){for(let m=0;m<12;m++)bal=bal*(1+mr)+iM;con+=iM*12;}}
+    new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'Portfolio',data:portL,borderColor:'#4ade80',backgroundColor:'rgba(74,222,128,.08)',fill:true,tension:.4,pointRadius:0},{label:'Contributed',data:contrib,borderColor:'#6b6b8a',borderDash:[4,4],fill:false,tension:.4,pointRadius:0}]},options:{responsive:true,plugins:{legend:{labels:{color:'#6b6b8a',font:{family:'DM Mono',size:10}}}},scales:{x:{ticks:{color:'#6b6b8a',font:{size:9},maxTicksLimit:8},grid:{color:'rgba(255,255,255,.04)'}},y:{ticks:{color:'#6b6b8a',font:{size:9},callback:v=>'$'+Math.round(v/1000)+'k'},grid:{color:'rgba(255,255,255,.04)'}}}}});
+  },100);
+
+  setTimeout(initSens, 160);
+}
+
+function filterSec(name,btn){
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active')); btn.classList.add('active');
+  document.querySelectorAll('.result-card').forEach(c=>{c.style.display=name==='all'||c.dataset.section===name?'':'none';});
+}
+function toggleCalc(i){
+  const p=document.getElementById('cp-'+i),b=document.getElementById('scb-'+i);
+  p.classList.toggle('open'); b.textContent=p.classList.contains('open')?'HIDE CALC':'SHOW CALC';
+}
+
+// ─── SENSITIVITY ─────────────────────────────────────────
+function toggleSens(){document.getElementById('sens-body').classList.toggle('open');document.getElementById('sens-toggle').classList.toggle('open');}
+
+function initSens(){
+  BASE={
+    retSav:gd('retirement','retSavings',800), retRet:gd('retirement','retReturns',11.41),
+    retAge2:gd('retirement','retRetireAge',65), retExp2:gd('retirement','retExpenses',3000),
+    retCurAge:gd('retirement','retAge',30), retCurSav:gd('retirement','retCurrent',15000),
+    retGrowth:gd('retirement','retSavingsGrowth',3), retPostR:gd('retirement','retPostReturns',4),
+    invMon2:gd('investment','invMonthly',500), invRet2:gd('investment','invReturn',11.41),
+    invYrs2:gd('investment','invYears',30), invInit2:gd('investment','invInitial',10000),
+    loanRate2:gd('loan','loanRate',6.5), loanExtra2:gd('loan','loanExtra',0),
+    loanYrs2:gd('loan','loanYears',30), loanAmt2:gd('loan','loanAmt',300000),
+    income2:gd('cashflow','cfIncome',4500)+gd('cashflow','cfOther',0),
+    fixedExp2:gd('cashflow','cfRent',0)+gd('cashflow','cfUtil',0)+gd('cashflow','cfPhone',0)+gd('cashflow','cfIns',0)+gd('cashflow','cfSubs',0),
+    varExp2:gd('cashflow','cfFood',0)+gd('cashflow','cfTransp',0)+gd('cashflow','cfEnt',0)+gd('cashflow','cfMisc',0),
+    inf2:gd('retirement','inflation',3.90)||gd('debt','inflation',3.90)||3.90,
+    debtExtra2:0,
+    debtRate2:(()=>{const rows=fd.debt?._rows||[];const d=rows.filter(r=>parseFloat(r.balance)>0);const tB=d.reduce((s,r)=>s+parseFloat(r.balance),0);return tB>0?d.reduce((s,r)=>s+(parseFloat(r.balance)||0)*(parseFloat(r.rate)||0),0)/tB:20;})(),
+  };
+  SENS={...BASE};
+  buildSliders();
+  renderSensOutputs();
+  renderHeatmaps();
+}
+
+function sl(key,label,type,min,max,step){
+  const v=BASE[key]!==undefined?BASE[key]:0;
+  return `<div class="slider-row"><div class="sl-label-row"><span class="sl-label">${label}</span><span class="sl-val" id="sv-${key}">${fmtSlVal(v,type)}</span></div>
+    <input type="range" id="sl-${key}" min="${min}" max="${max}" step="${step}" value="${v}" oninput="onSl('${key}',this.value,'${type}')"></div>`;
+}
+function fmtSlVal(v,t){
+  if(t==='$')return '$'+parseFloat(v).toLocaleString('en-US',{maximumFractionDigits:0});
+  if(t==='%')return parseFloat(v).toFixed(1)+'%';
+  if(t==='age')return 'Age '+Math.round(v);
+  return v+' yrs';
+}
+function getSType(k){if(['retRet','invRet2','loanRate2','inf2','debtRate2'].includes(k))return'%';if(['retAge2','invYrs2','loanYrs2'].includes(k))return'age';return'$';}
+
+function buildSliders(){
+  const wrap=document.getElementById('sens-sliders');
+  const gs=[];
+  if(selected.includes('debt'))gs.push(`<div class="slider-group"><div class="slider-group-title">💳 Debt Repayment</div>${sl('debtExtra2','Extra Monthly Payment','$',0,3000,50)}${sl('debtRate2','Avg Interest Rate (%)','%',1,40,0.5)}</div>`);
+  if(selected.includes('retirement'))gs.push(`<div class="slider-group"><div class="slider-group-title">🏖️ Retirement</div>${sl('retSav','Monthly Savings','$',100,5000,50)}${sl('retRet','Investment Return % (MC S&P500)','%',1,18,0.5)}${sl('retAge2','Retirement Age','age',50,75,1)}${sl('retExp2','Monthly Expenses','$',500,10000,100)}</div>`);
+  if(selected.includes('investment'))gs.push(`<div class="slider-group"><div class="slider-group-title">📈 Investment Growth</div>${sl('invMon2','Monthly Contribution','$',0,5000,50)}${sl('invRet2','Annual Return % (MC S&P500)','%',1,20,0.5)}${sl('invYrs2','Investment Period (yrs)','yrs',5,50,1)}</div>`);
+  if(selected.includes('loan'))gs.push(`<div class="slider-group"><div class="slider-group-title">🏠 Loan &amp; Debt</div>${sl('loanRate2','Loan Interest Rate (%)','%',1,15,0.1)}${sl('loanExtra2','Extra Monthly Payment','$',0,3000,50)}${sl('loanYrs2','Loan Term (years)','yrs',5,30,1)}</div>`);
+  if(selected.includes('cashflow'))gs.push(`<div class="slider-group"><div class="slider-group-title">💰 Cash Flow</div>${sl('income2','Monthly Income','$',1000,20000,100)}${sl('fixedExp2','Total Fixed Expenses','$',200,10000,100)}${sl('inf2','Annual Inflation % (MC CPI-U)','%',0,10,0.5)}</div>`);
+  wrap.innerHTML=gs.length?gs.join(''):'<div style="color:var(--muted);font-size:12px;">Select modules to see sliders.</div>';
+}
+
+function onSl(key,val,type){SENS[key]=parseFloat(val);const el=document.getElementById('sv-'+key);if(el)el.textContent=fmtSlVal(val,type);renderSensOutputs();renderHeatmaps();}
+
+function cDebt(rows,extra,overrideRate){
+  // rows: array of {balance, rate (as decimal), minPay}
+  // extra: additional payment on top of all minimums
+  // overrideRate: if set, treat all debts as having this rate (for heatmap)
+  const debts=rows.map(d=>({...d,bal:d.balance,rate:overrideRate!=null?overrideRate/100:d.rate})).filter(d=>d.bal>0);
+  if(!debts.length)return{months:0,totalInterest:0,interestSaved:0};
+  // baseline (no extra) for interestSaved
+  let mo=0,totInt=0;
+  while(debts.some(d=>d.bal>0)&&mo<600){
+    mo++;
+    debts.forEach(d=>{if(!d.bal)return;const i=d.bal*d.rate/12;totInt+=i;d.bal=Math.max(0,d.bal+i-Math.min(d.minPay,d.bal+i));});
+    // apply extra to highest-rate remaining
+    const pri=debts.filter(d=>d.bal>0).sort((a,b)=>b.rate-a.rate)[0];
+    if(pri)pri.bal=Math.max(0,pri.bal-Math.min(extra,pri.bal));
+  }
+  // baseline interest (no extra)
+  const debtsB=rows.map(d=>({...d,bal:d.balance,rate:overrideRate!=null?overrideRate/100:d.rate})).filter(d=>d.bal>0);
+  let moB=0,intB=0;
+  while(debtsB.some(d=>d.bal>0)&&moB<600){moB++;debtsB.forEach(d=>{if(!d.bal)return;const i=d.bal*d.rate/12;intB+=i;d.bal=Math.max(0,d.bal+i-Math.min(d.minPay,d.bal+i));});}
+  return{months:mo,totalInterest:totInt,interestSaved:intB-totInt};
+}
+function cRet(sav,r,ra,exp,ca,cs,sg,pr,inf){
+  const y=Math.max(0,ra-ca),mr=r/100/12;let p=cs,m=sav;
+  for(let i=0;i<y;i++){for(let j=0;j<12;j++)p=p*(1+mr)+m;m*=(1+sg/100);}
+  const ie=exp*Math.pow(1+inf/100,y),aw=ie*12,wr=p>0?aw/p:9;
+  let b=p,ry=0;while(b>0&&ry<50){b=b*(1+pr/100)-aw;ry++;}
+  return{portfolio:p,wRate:wr,fy:b>0?51:ry,aw};
+}
+function cInv(i,m,r,y){const mr=r/100/12,n=y*12;let b=i;for(let k=0;k<n;k++)b=b*(1+mr)+m;return b;}
+function cLoan(a,r,y,e){const mr=r/100/12,n=y*12;if(!mr)return{payment:a/n,totalInterest:0,months:n};const p=a*mr*Math.pow(1+mr,n)/(Math.pow(1+mr,n)-1),t=p+e;let b=a,mo=0,int=0;while(b>0.01&&mo<n*2){const i=b*mr;const pr=Math.min(t-i,b);int+=i;b=Math.max(0,b-pr);mo++;}return{payment:p,totalInterest:int,months:mo};}
+
+function renderSensOutputs(){
+  const debtRows=(fd.debt?._rows||[]).map(r=>({balance:parseFloat(r.balance)||0,rate:(parseFloat(r.rate)||0)/100,minPay:parseFloat(r.minPay)||0})).filter(d=>d.balance>0);
+  const debt=cDebt(debtRows,SENS.debtExtra2,null);
+  const debtB=cDebt(debtRows,BASE.debtExtra2,null);
+  const ret=cRet(SENS.retSav,SENS.retRet,SENS.retAge2,SENS.retExp2,BASE.retCurAge,BASE.retCurSav,BASE.retGrowth,BASE.retPostR,SENS.inf2);
+  const retB=cRet(BASE.retSav,BASE.retRet,BASE.retAge2,BASE.retExp2,BASE.retCurAge,BASE.retCurSav,BASE.retGrowth,BASE.retPostR,BASE.inf2);
+  const inv=cInv(BASE.invInit2,SENS.invMon2,SENS.invRet2,SENS.invYrs2);
+  const invB=cInv(BASE.invInit2,BASE.invMon2,BASE.invRet2,BASE.invYrs2);
+  const loan=cLoan(BASE.loanAmt2,SENS.loanRate2,SENS.loanYrs2,SENS.loanExtra2);
+  const loanB=cLoan(BASE.loanAmt2,BASE.loanRate2,BASE.loanYrs2,BASE.loanExtra2);
+  const netCF=SENS.income2-SENS.fixedExp2-BASE.varExp2;
+  const netCFB=BASE.income2-BASE.fixedExp2-BASE.varExp2;
+  const all=[
+    {mod:'debt',label:'Debt Payoff Time',cur:debt.months,base:debtB.months,f:'mo',lb:true,color:'#ff6b6b'},
+    {mod:'debt',label:'Total Interest Paid',cur:debt.totalInterest,base:debtB.totalInterest,f:'$',lb:true,color:'#ff6b6b'},
+    {mod:'debt',label:'Interest Saved',cur:debt.interestSaved,base:0,f:'$',color:'#4ade80'},
+    {mod:'retirement',label:'Retirement Portfolio',cur:ret.portfolio,base:retB.portfolio,f:'$',color:'#c8f564'},
+    {mod:'retirement',label:'Withdrawal Rate',cur:ret.wRate*100,base:retB.wRate*100,f:'%',lb:true,color:'#ffd166'},
+    {mod:'retirement',label:'Portfolio Sustains',cur:ret.fy,base:retB.fy,f:'yrs',color:'#4ade80'},
+    {mod:'investment',label:'Investment Value',cur:inv,base:invB,f:'$',color:'#4ade80'},
+    {mod:'loan',label:'Total Loan Interest',cur:loan.totalInterest,base:loanB.totalInterest,f:'$',lb:true,color:'#7b61ff'},
+    {mod:'loan',label:'Loan Payoff',cur:loan.months,base:loanB.months,f:'mo',lb:true,color:'#7b61ff'},
+    {mod:'cashflow',label:'Net Cash Flow',cur:netCF,base:netCFB,f:'$',color:'#ffd166'},
+  ];
+  const outputs=all.filter(o=>selected.includes(o.mod));
+  const c=document.getElementById('sens-outputs');
+  if(!outputs.length){c.innerHTML='<div style="color:var(--muted);font-size:12px;">No applicable modules selected.</div>';return;}
+  c.innerHTML=outputs.map(o=>{
+    const d=o.cur-o.base,g=o.lb?d<0:d>0,cls=d===0?'neutral':g?'up':'down',ar=d===0?'—':d>0?'▲':'▼';
+    let vs,ds;
+    if(o.f==='$'){vs='$'+Math.abs(Math.round(o.cur)).toLocaleString('en-US');ds=(d>=0?'+':'-')+'$'+Math.abs(Math.round(d)).toLocaleString('en-US');}
+    else if(o.f==='%'){vs=o.cur.toFixed(1)+'%';ds=(d>=0?'+':'')+d.toFixed(1)+'%';}
+    else{vs=Math.round(o.cur)+' '+o.f;ds=(d>=0?'+':'')+Math.round(d)+' '+o.f;}
+    return`<div class="so-card ${Math.abs(d)>0.001?'changed':''}"><div class="so-label">${o.label}</div><div class="so-value" style="color:${o.color}">${vs}</div><div class="so-delta ${cls}">${ar} ${ds} vs baseline</div></div>`;
+  }).join('');
+}
+
+function renderHeatmaps(){
+  const wrap=document.getElementById('sens-heatmaps');let html='';
+  if(selected.includes('debt')){
+    const debtRows=(fd.debt?._rows||[]).map(r=>({balance:parseFloat(r.balance)||0,rate:(parseFloat(r.rate)||0)/100,minPay:parseFloat(r.minPay)||0})).filter(d=>d.balance>0);
+    const extraAmts=[0,50,100,200,500,1000];
+    const rateOverrides=[8,12,16,20,24,30];
+    html+=`<div style="margin-top:16px"><div class="hm-title">💳 Debt Heatmap — Payoff Months by Avg Rate × Extra Payment</div><div class="hm-wrap"><table class="hm-table"><thead><tr><th>Rate \ Extra Pay</th>${extraAmts.map(e=>`<th>${e===0?'Min Only':'+$'+e}/mo</th>`).join('')}</tr></thead><tbody>`;
+    const baseMonths=cDebt(debtRows,BASE.debtExtra2,null).months||1;
+    rateOverrides.forEach(r=>{
+      html+=`<tr><td class="rl">${r}% avg</td>`;
+      extraAmts.forEach(e=>{
+        const res=cDebt(debtRows,e,r);
+        const isCur=Math.abs(r-SENS.debtRate2)<0.3&&Math.abs(e-SENS.debtExtra2)<1;
+        const ratio=res.months/(baseMonths||1);
+        const cls=isCur?'hm-base':ratio<=0.5?'hm-great':ratio<=0.75?'hm-good':ratio<=1.0?'hm-ok':'hm-bad';
+        const label=res.months>=600?'Never':(res.months>=12?Math.floor(res.months/12)+'y '+res.months%12+'m':res.months+'mo');
+        html+=`<td class="${cls}">${label}</td>`;
+      });
+      html+='</tr>';
+    });
+    html+='</tbody></table></div></div>';
+  }
+  if(selected.includes('investment')){
+    const rr=[4,6,8,10,12,14],cc=[100,250,500,1000,2000,3000];
+    const bI=cInv(BASE.invInit2,BASE.invMon2,BASE.invRet2,SENS.invYrs2);
+    html+=`<div style="margin-top:16px"><div class="hm-title">📊 Investment — Final Value by Return × Contribution</div><div class="hm-wrap"><table class="hm-table"><thead><tr><th>Rate\Contrib</th>${cc.map(c=>`<th>$${c>=1000?c/1000+'k':c}/mo</th>`).join('')}</tr></thead><tbody>`;
+    rr.forEach(r=>{html+=`<tr><td class="rl">${r}%</td>`;cc.forEach(c=>{const v=cInv(BASE.invInit2,c,r,SENS.invYrs2),iC=Math.abs(r-SENS.invRet2)<0.1&&Math.abs(c-SENS.invMon2)<1,p=v/(bI||1),cls=iC?'hm-base':p>=1.5?'hm-great':p>=1.1?'hm-good':p>=0.9?'hm-ok':'hm-bad';html+=`<td class="${cls}">$${Math.round(v/1000)}k</td>`;});html+='</tr>';});
+    html+='</tbody></table></div></div>';
+  }
+  if(selected.includes('retirement')){
+    const sa=[200,400,800,1200,2000,3000],rr=[4,5,6,7,8,10];
+    const bR=cRet(BASE.retSav,BASE.retRet,SENS.retAge2,SENS.retExp2,BASE.retCurAge,BASE.retCurSav,BASE.retGrowth,BASE.retPostR,SENS.inf2).portfolio;
+    html+=`<div style="margin-top:20px"><div class="hm-title">🏖️ Retirement — Portfolio by Savings × Return</div><div class="hm-wrap"><table class="hm-table"><thead><tr><th>Savings\Return</th>${rr.map(r=>`<th>${r}%</th>`).join('')}</tr></thead><tbody>`;
+    sa.forEach(s=>{html+=`<tr><td class="rl">$${s}/mo</td>`;rr.forEach(r=>{const res=cRet(s,r,SENS.retAge2,SENS.retExp2,BASE.retCurAge,BASE.retCurSav,BASE.retGrowth,BASE.retPostR,SENS.inf2),iC=Math.abs(s-SENS.retSav)<1&&Math.abs(r-SENS.retRet)<0.1,ra=res.portfolio/(bR||1),cls=iC?'hm-base':ra>=1.4?'hm-great':ra>=1.1?'hm-good':ra>=0.85?'hm-ok':'hm-bad';html+=`<td class="${cls}">$${Math.round(res.portfolio/1000)}k</td>`;});html+='</tr>';});
+    html+='</tbody></table></div></div>';
+  }
+  if(selected.includes('loan')){
+    const lr=[3,4,5,6.5,7,8,9,10],ep=[0,100,250,500,1000,2000];
+    const bL=cLoan(BASE.loanAmt2,BASE.loanRate2,SENS.loanYrs2,BASE.loanExtra2).totalInterest;
+    html+=`<div style="margin-top:20px;margin-bottom:4px"><div class="hm-title">🏠 Loan — Total Interest by Rate × Extra Payment</div><div class="hm-wrap"><table class="hm-table"><thead><tr><th>Rate\Extra Pay</th>${ep.map(e=>`<th>${e===0?'None':'+$'+e}/mo</th>`).join('')}</tr></thead><tbody>`;
+    lr.forEach(r=>{html+=`<tr><td class="rl">${r}%</td>`;ep.forEach(e=>{const res=cLoan(BASE.loanAmt2,r,SENS.loanYrs2,e),iC=Math.abs(r-SENS.loanRate2)<0.05&&Math.abs(e-SENS.loanExtra2)<1,ra=res.totalInterest/(bL||1),cls=iC?'hm-base':ra<=0.5?'hm-great':ra<=0.75?'hm-good':ra<=1.1?'hm-ok':'hm-bad';html+=`<td class="${cls}">$${Math.round(res.totalInterest/1000)}k</td>`;});html+='</tr>';});
+    html+='</tbody></table></div></div>';
+  }
+  wrap.innerHTML=html||'<div style="color:var(--muted);font-size:12px;margin-top:8px;">No heatmaps available for selected modules.</div>';
+}
+
+const SCENS={
+  base:{},
+  optimistic:{retSav:1200,retRet:9,retAge2:62,retExp2:2500,invMon2:800,invRet2:10,loanRate2:5,loanExtra2:200,inf2:2,debtExtra2:300,debtRate2:15},
+  pessimistic:{retSav:400,retRet:5,retAge2:68,retExp2:3500,invMon2:200,invRet2:5,loanRate2:8,loanExtra2:0,inf2:5,debtExtra2:0,debtRate2:28},
+  aggressive:{retSav:3000,retRet:8,retAge2:55,invMon2:2000,invRet2:9,loanExtra2:1000,debtExtra2:1000,debtRate2:20},
+  recession:{retRet:3,invRet2:3,loanExtra2:0,inf2:7},
+};
+function applyScen(name,e){
+  document.querySelectorAll('.scen-btn').forEach(b=>b.classList.remove('active'));
+  if(e&&e.target)e.target.classList.add('active');
+  const s=SCENS[name];
+  Object.keys(BASE).forEach(k=>{SENS[k]=s[k]!==undefined?s[k]:BASE[k];const sl=document.getElementById('sl-'+k);if(sl)sl.value=SENS[k];const sv=document.getElementById('sv-'+k);if(sv)sv.textContent=fmtSlVal(SENS[k],getSType(k));});
+  renderSensOutputs();renderHeatmaps();
+}
+</script>
+</body>
+</html>
