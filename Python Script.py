@@ -118,17 +118,10 @@ class Debt:
     user_payment: float = 0.0    # what user actually wants to pay (>= min enforced)
     extra:        float = 0.0    # additional amount towards priority debt
 
-def simulate_debt(debts: List[Debt], strategy: str = "avalanche") -> dict:
-    """
-    End-of-month model:
-      1. Interest accrues on FULL outstanding balance
-      2. Payment applied at END of month
-      3. Any freed-up money cascades to priority debt
-    """
+def _simulate_strategy(debts: List[Debt], strategy: str) -> dict:
     if not debts:
-        return {"months": 0, "total_interest": 0, "interest_saved": 0, "monthly_log": []}
+        return {"months": 0, "total_interest": 0, "monthly_log": []}
 
-    # Sort order for priority
     if strategy == "avalanche":
         priority_order = sorted(debts, key=lambda d: d.annual_rate, reverse=True)
     else:
@@ -152,25 +145,22 @@ def simulate_debt(debts: List[Debt], strategy: str = "avalanche") -> dict:
         month_interest = 0
         freed_up = 0
 
-        # Step 1 + 2 — interest accrues, then payment
         for w in working:
             if w["bal"] <= 0:
                 continue
-            interest = w["bal"] * w["rate"] / 12   # interest on full balance
-            w["bal"] += interest                     # balance grows first
+            interest = w["bal"] * w["rate"] / 12
+            w["bal"] += interest
             total_interest += interest
             month_interest += interest
 
-            paid = min(w["sched_pay"], w["bal"])     # can't overpay
+            paid = min(w["sched_pay"], w["bal"])
             w["bal"] = max(0.0, w["bal"] - paid)
             if w["bal"] == 0:
-                freed_up += w["sched_pay"] - paid    # recapture leftover
+                freed_up += w["sched_pay"] - paid
 
-        # Step 3 — extra + freed cash → priority debt
         pool = total_extra + freed_up
         for sp in priority_order:
-            target = next((w for w in working
-                           if w["name"] == sp.name and w["bal"] > 0), None)
+            target = next((w for w in working if w["name"] == sp.name and w["bal"] > 0), None)
             if target:
                 apply = min(pool, target["bal"])
                 target["bal"] = max(0.0, target["bal"] - apply)
@@ -182,13 +172,24 @@ def simulate_debt(debts: List[Debt], strategy: str = "avalanche") -> dict:
             "balances": {w["name"]: round(w["bal"], 2) for w in working},
         })
 
+    return {
+        "months": month,
+        "total_interest": round(total_interest, 2),
+        "monthly_log": monthly_log,
+    }
+
+
+def simulate_debt(debts: List[Debt], strategy: str = "avalanche") -> dict:
+    active = _simulate_strategy(debts, strategy)
+    other_strategy = "snowball" if strategy == "avalanche" else "avalanche"
+    other = _simulate_strategy(debts, other_strategy)
+
     # Baseline: same scheduled payments (user_payment honored) but NO extra, NO cascade
-    # This shows what extra payment + cascade actually saves
     baseline = [{"bal": d.balance, "rate": d.annual_rate,
                  "sched": max(d.min_payment, d.user_payment or d.min_payment)} for d in debts]
     base_int = 0
     bmo = 0
-    while any(b["bal"] > 0 for b in baseline) and bmo < MAX_MONTHS:
+    while any(b["bal"] > 0 for b in baseline) and bmo < 600:
         bmo += 1
         for b in baseline:
             if b["bal"] <= 0:
@@ -200,10 +201,14 @@ def simulate_debt(debts: List[Debt], strategy: str = "avalanche") -> dict:
             b["bal"] = max(0.0, b["bal"] - paid)
 
     return {
-        "months":          month,
-        "total_interest":  round(total_interest, 2),
-        "interest_saved":  round(base_int - total_interest, 2),
-        "monthly_log":     monthly_log[:6],    # first 6 months shown
+        "strategy": strategy,
+        "months": active["months"],
+        "total_interest": active["total_interest"],
+        "interest_saved": round(base_int - active["total_interest"], 2),
+        "monthly_log": active["monthly_log"][:6],
+        "other_strategy": other_strategy,
+        "other_months": other["months"],
+        "other_total_interest": other["total_interest"],
     }
 
 
@@ -409,9 +414,11 @@ if __name__ == "__main__":
     ]
     dr = simulate_debt(debts, "avalanche")
     print(f"\n── Debt Repayment (end-of-month model) ──")
-    print(f"  Payoff time    : {dr['months']//12}y {dr['months']%12}m")
-    print(f"  Total interest : ${dr['total_interest']:,.2f}")
-    print(f"  Interest saved : ${dr['interest_saved']:,.2f}")
+    print(f"  Strategy used       : {dr['strategy'].capitalize()}")
+    print(f"  Payoff time         : {dr['months']//12}y {dr['months']%12}m")
+    print(f"  Total interest      : ${dr['total_interest']:,.2f}")
+    print(f"  Interest saved      : ${dr['interest_saved']:,.2f}")
+    print(f"  What-if ({dr['other_strategy'].capitalize()}) payoff : {dr['other_months']//12}y {dr['other_months']%12}m")
     print(f"  First 3 months:")
     for m in dr["monthly_log"][:3]:
         bals = " | ".join(f"{k}: ${v:,.0f}" for k,v in m["balances"].items())
@@ -422,7 +429,8 @@ if __name__ == "__main__":
         current_age=30, retirement_age=65,
         current_savings=15000, monthly_savings=800,
         savings_growth_pct=3, pre_ret_return_pct=MC_INVESTMENT["median"],
-        post_ret_return_pct=4, monthly_expenses=3000,
+        # Use stock market Monte Carlo median for post-retirement return as well
+        post_ret_return_pct=MC_INVESTMENT["median"], monthly_expenses=3000,
         inflation_pct=MC_INFLATION["median"],
         current_income=80000, current_tax_rate=0.22,
         retirement_tax_rate=0.15, filing_status="single",

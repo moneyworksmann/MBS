@@ -507,7 +507,7 @@ const TEMPLATES = {
       <div class="field"><label>Current Savings ($)</label><input type="number" data-key="retCurrent" value="15000"></div>
       <div class="field"><label>Monthly Savings Contribution ($)</label><input type="number" data-key="retSavings" value="800"></div>
       <div class="field"><label>Annual Savings Growth (%)</label><input type="number" data-key="retSavingsGrowth" value="3" step="0.1"></div>
-      <div class="field"><label>Post-Retirement Return (%)</label><input type="number" data-key="retPostReturns" value="4" step="0.1"></div>
+      <div class="field"><label>Post-Retirement Return (%)</label><input type="number" data-key="retPostReturns" value="11.41" step="0.01"></div>
     </div>
 
     <div class="sec-label">Monte Carlo Assumptions</div>
@@ -681,6 +681,7 @@ function buildResults() {
     })).filter(d => d.balance > 0);
 
     const strategy = fd.debt?.strategy || 'avalanche';
+    const otherStrategy = strategy === 'avalanche' ? 'snowball' : 'avalanche';
     const tDebt = debts.reduce((s,d)=>s+d.balance, 0);
     // effective scheduled payment per debt = max(minPay, userPayment)
     totalMin = debts.reduce((s,d)=>s+Math.max(d.minPay, d.userPayment||d.minPay), 0);
@@ -689,15 +690,11 @@ function buildResults() {
     // Weighted average rate
     const wRate = tDebt > 0 ? debts.reduce((s,d)=>s+d.balance*d.rate, 0)/tDebt : 0;
 
-    // Sort order for priority (avalanche = highest rate first, snowball = lowest balance first)
-    const sortedPriority = strategy === 'avalanche'
-      ? [...debts].sort((a,b) => b.rate - a.rate)
-      : [...debts].sort((a,b) => a.balance - b.balance);
-
-    // Working copies
-    let working = debts.map(d => ({ ...d, bal: d.balance }));
-
-    let mo = 0, totInt = 0;
+    // Simulate payoff for selected strategy and the alternate strategy
+    const currentResult = simulateDebtStrategy(debts, strategy);
+    const otherResult = simulateDebtStrategy(debts, otherStrategy);
+    let mo = currentResult.months;
+    let totInt = currentResult.totalInterest;
 
     while (working.some(d => d.bal > 0) && mo < 600) {
       mo++;
@@ -759,6 +756,7 @@ function buildResults() {
         <div class="metric-row"><span class="metric-label">Total Interest to Pay</span><span class="metric-value negative">${fmt(totInt)}</span></div>
         ${intSavedVsMinOnly>0?`<div class="metric-row"><span class="metric-label">Interest Saved vs Min-Only</span><span class="metric-value positive">${fmt(intSavedVsMinOnly)}</span></div>`:''}
         <div class="metric-row"><span class="metric-label">Strategy</span><span class="metric-value accent2">${strategy==='avalanche'?'Avalanche':'Snowball'}</span></div>
+        <div class="metric-row"><span class="metric-label">What-if ${otherStrategy==='avalanche'?'Avalanche':'Snowball'} payoff</span><span class="metric-value">${Math.floor(otherResult.months/12)>0?Math.floor(otherResult.months/12)+'y ':''}${otherResult.months%12}m</span></div>
         <div style="margin-top:16px">
           <table class="dt">
             <thead><tr><th>Debt</th><th>Balance</th><th>Rate</th><th>Min Pay</th><th>My Payment</th></tr></thead>
@@ -926,8 +924,13 @@ function buildResults() {
     // ── Roth advantage (if eligible) ────────────────────────
     const rothAdvantage = rothAfterTax - tradAfterTax;
 
+    const chartTradAfter = chartTrad.map(v => Math.round(v * (1 - taxRet)));
+    const chartRothAfter = chartRoth.map(v => Math.round(v));
+    const chartGenAfter  = chartGen.map(v => Math.round(v * (1 - taxRet * 0.5)));
+    const chartAftertaxDiff = chartRothAfter.map((v,i) => Math.round(v - chartTradAfter[i]));
+
     cards.push({section:'retirement', title:'Retirement', icon:'🏖️', color:'#c8f564',
-      _chartData: { chartAges, chartTrad, chartRoth, chartGen },
+      _chartData: { chartAges, chartTrad, chartRoth, chartGen, chartTradAfter, chartRothAfter, chartGenAfter, chartAftertaxDiff },
       body:`
         <div class="big-metric">
           <div class="big-metric-value" style="color:var(--accent)">${fmt(totalGross)}</div>
@@ -970,7 +973,8 @@ function buildResults() {
           </div>
         </div>
 
-        <div style="margin-top:16px"><canvas id="ret-ira-chart" height="180"></canvas></div>`,
+        <div style="margin-top:16px"><canvas id="ret-ira-chart" height="180"></canvas></div>
+        <div style="margin-top:16px"><canvas id="ret-aftertax-diff-chart" height="180"></canvas></div>`, 
 
       calc:`
         <div class="comp-step"><span class="var">Years to Retire</span> = ${rRetire}-${rAge} = <span class="val">${ytr} yrs</span></div>
@@ -1053,7 +1057,7 @@ function buildResults() {
   setTimeout(()=>{
     const rctx = document.getElementById('ret-ira-chart');
     if (rctx && retCard) {
-      const {chartAges, chartTrad, chartRoth, chartGen} = retCard._chartData;
+      const {chartAges, chartTrad, chartRoth, chartGen, chartTradAfter, chartRothAfter, chartGenAfter, chartAftertaxDiff} = retCard._chartData;
       new Chart(rctx, {type:'line', data:{
         labels: chartAges,
         datasets:[
@@ -1066,6 +1070,27 @@ function buildResults() {
         plugins:{
           legend:{labels:{color:'#6b6b8a', font:{family:'DM Mono',size:10}}},
           title:{display:true, text:'Portfolio Growth by Account Type', color:'#6b6b8a', font:{family:'Syne',size:11}}
+        },
+        scales:{
+          x:{ticks:{color:'#6b6b8a',font:{size:9},maxTicksLimit:10}, grid:{color:'rgba(255,255,255,.04)'}},
+          y:{ticks:{color:'#6b6b8a',font:{size:9},callback:v=>'$'+Math.round(v/1000)+'k'}, grid:{color:'rgba(255,255,255,.04)'}}
+        }
+      }});
+    }
+
+    // after-tax difference bar chart
+    const rctxDiff = document.getElementById('ret-aftertax-diff-chart');
+    if (rctxDiff && retCard) {
+      new Chart(rctxDiff, {type:'bar', data:{
+        labels: chartAges,
+        datasets:[
+          {label:'Roth vs Traditional after-tax difference', data:chartAftertaxDiff, backgroundColor:'rgba(123,97,255,.8)', borderColor:'#7b61ff', borderWidth:1}
+        ]
+      }, options:{
+        responsive:true,
+        plugins:{
+          legend:{labels:{color:'#6b6b8a', font:{family:'DM Mono',size:10}}},
+          title:{display:true, text:'After-tax Roth vs Traditional Difference', color:'#6b6b8a', font:{family:'Syne',size:11}}
         },
         scales:{
           x:{ticks:{color:'#6b6b8a',font:{size:9},maxTicksLimit:10}, grid:{color:'rgba(255,255,255,.04)'}},
@@ -1170,6 +1195,47 @@ function cDebt(rows,extra,overrideRate){
   while(debtsB.some(d=>d.bal>0)&&moB<600){moB++;debtsB.forEach(d=>{if(!d.bal)return;const i=d.bal*d.rate/12;intB+=i;d.bal=Math.max(0,d.bal+i-Math.min(d.minPay,d.bal+i));});}
   return{months:mo,totalInterest:totInt,interestSaved:intB-totInt};
 }
+
+function simulateDebtStrategy(debts, strategy) {
+  const sortedPriority = strategy === 'avalanche'
+    ? [...debts].sort((a,b) => b.rate - a.rate)
+    : [...debts].sort((a,b) => a.balance - b.balance);
+
+  let working = debts.map(d => ({ ...d, bal: d.balance }));
+  let mo = 0, totInt = 0;
+
+  while (working.some(d => d.bal > 0) && mo < 600) {
+    mo++;
+    working.forEach(d => {
+      if (d.bal <= 0) return;
+      const interest = d.bal * d.rate / 12;
+      d.bal += interest;
+      totInt += interest;
+    });
+
+    let freedUp = 0;
+    working.forEach(d => {
+      if (d.bal <= 0) return;
+      const scheduled = Math.max(d.minPay, d.userPayment || d.minPay);
+      const paid = Math.min(scheduled, d.bal);
+      d.bal = Math.max(0, d.bal - paid);
+      if (d.bal === 0) freedUp += (scheduled - paid);
+    });
+
+    let pooledExtra = debts.reduce((sum, d) => sum + (d.extra || 0), 0) + freedUp;
+    for (const sp of sortedPriority) {
+      const target = working.find(w => w.name === sp.name && w.bal > 0);
+      if (target) {
+        const apply = Math.min(pooledExtra, target.bal);
+        target.bal = Math.max(0, target.bal - apply);
+        break;
+      }
+    }
+  }
+
+  return { months: mo, totalInterest: totInt };
+}
+
 function cRet(sav,r,ra,exp,ca,cs,sg,pr,inf){
   const y=Math.max(0,ra-ca),mr=r/100/12;let p=cs,m=sav;
   for(let i=0;i<y;i++){for(let j=0;j<12;j++)p=p*(1+mr)+m;m*=(1+sg/100);}
