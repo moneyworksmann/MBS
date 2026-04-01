@@ -696,54 +696,7 @@ function buildResults() {
     let mo = currentResult.months;
     let totInt = currentResult.totalInterest;
 
-    while (working.some(d => d.bal > 0) && mo < 600) {
-      mo++;
-
-      // Step 1 — interest accrues on full balance BEFORE payment (end-of-month model)
-      working.forEach(d => {
-        if (d.bal <= 0) return;
-        const interest = d.bal * d.rate / 12;   // interest on outstanding balance
-        d.bal += interest;                        // balance grows first
-        totInt += interest;
-      });
-
-      // Step 2 — apply each debt's scheduled payment at end of month
-      let freedUp = 0;
-      working.forEach(d => {
-        if (d.bal <= 0) return;
-        const scheduled = Math.max(d.minPay, d.userPayment || d.minPay);
-        const paid = Math.min(scheduled, d.bal);  // can't overpay
-        d.bal = Math.max(0, d.bal - paid);
-        if (d.bal === 0) freedUp += (scheduled - paid); // this debt is cleared — recapture leftover
-      });
-
-      // Step 3 — apply extra payment + freed-up cash to priority debt
-      let pooledExtra = tExtra + freedUp;
-      for (const sp of sortedPriority) {
-        const target = working.find(w => w.name === sp.name && w.bal > 0);
-        if (target) {
-          const apply = Math.min(pooledExtra, target.bal);
-          target.bal = Math.max(0, target.bal - apply);
-          break; // only one priority debt at a time
-        }
-      }
-    }
-
-    const intSavedVsMinOnly = (() => {
-      // baseline: everyone pays minimum only, no extra
-      let bWorking = debts.map(d => ({ ...d, bal: d.balance }));
-      let bMo = 0, bInt = 0;
-      while (bWorking.some(d => d.bal > 0) && bMo < 600) {
-        bMo++;
-        bWorking.forEach(d => {
-          if (d.bal <= 0) return;
-          const interest = d.bal * d.rate / 12;
-          d.bal += interest; bInt += interest;
-          d.bal = Math.max(0, d.bal - Math.min(d.minPay, d.bal));
-        });
-      }
-      return bInt - totInt;
-    })();
+    const intSavedVsMinOnly = cDebt(rows, tExtra, null).interestSaved;
 
     cards.push({section:'debt', title:'Debt Repayment', icon:'💳', color:'#ff6b6b',
       body:`<div class="big-metric">
