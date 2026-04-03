@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Financial Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--surface:#13131a;--surface2:#1c1c28;--border:#2a2a3d;--accent:#c8f564;--accent2:#7b61ff;--accent3:#ff6b6b;--accent4:#ffd166;--text:#e8e8f0;--muted:#6b6b8a;--success:#4ade80;--danger:#f87171;--info:#5dade2;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;overflow-x:hidden;}
+.header{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(10,10,15,.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:20px 24px;}
+.header-wrap{max-width:1300px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:24px;}
+.header-title{font-family:'DM Serif Display',serif;font-size:32px;}
+.header-title span{color:var(--accent);}
+.header-actions{display:flex;gap:12px;}
+.btn{background:none;border:1px solid var(--border);color:var(--muted);padding:10px 20px;border-radius:100px;font-family:'Syne',sans-serif;font-size:13px;cursor:pointer;transition:all .2s;}
+.btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(200,245,100,.06);}
+.btn.primary{background:var(--accent);color:#0a0a0f;border:none;font-weight:700;}
+.btn.primary:hover{transform:scale(1.02);box-shadow:0 0 24px rgba(200,245,100,.35);}
+.main-content{margin-top:80px;max-width:1300px;margin-left:auto;margin-right:auto;padding:48px 24px 80px;}
+.section{margin-bottom:60px;}
+.section-title{font-family:'DM Serif Display',serif;font-size:28px;margin-bottom:24px;display:flex;align-items:center;gap:12px;}
+.section-title::before{content:'';width:4px;height:28px;border-radius:2px;background:var(--accent);}
+.metrics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:32px;}
+.metric-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;transition:all .2s;}
+.metric-card:hover{border-color:var(--accent2);transform:translateY(-2px);}
+.metric-label{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+.metric-value{font-family:'DM Serif Display',serif;font-size:28px;line-height:1;color:var(--accent);}
+.metric-value.positive{color:var(--success);}
+.metric-value.negative{color:var(--danger);}
+.metric-value.neutral{color:var(--info);}
+.result-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px;}
+.result-card{background:var(--surface);border:1px solid var(--border);border-radius:18px;overflow:hidden;transition:all .2s;}
+.result-card:hover{border-color:var(--accent2);transform:translateY(-4px);box-shadow:0 8px 32px rgba(200,245,100,.1);}
+.card-header{background:linear-gradient(135deg,rgba(200,245,100,.1) 0%,rgba(123,97,255,.05) 100%);padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;}
+.card-icon{width:40px;height:40px;border-radius:10px;background:rgba(200,245,100,.15);display:flex;align-items:center;justify-content:center;font-size:20px;}
+.card-title{font-size:15px;font-weight:700;letter-spacing:.04em;}
+.card-body{padding:24px;}
+.metric-row{display:flex;justify-content:space-between;align-items:baseline;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04);}
+.metric-row:last-child{border-bottom:none;}
+.metric-row-label{font-size:12px;color:var(--muted);}
+.metric-row-value{font-family:'DM Mono',monospace;font-size:14px;font-weight:600;color:var(--accent);}
+.chart-container{position:relative;height:280px;margin:20px 0;}
+.comparison-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-top:20px;}
+.comp-item{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;}
+.comp-label{font-size:11px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;margin-bottom:8px;}
+.comp-value{font-family:'DM Serif Display',serif;font-size:24px;color:var(--accent);}
+.comp-value.alt{color:var(--accent2);}
+.progress-bar{height:6px;background:var(--border);border-radius:100px;overflow:hidden;margin-top:8px;}
+.progress-fill{height:100%;background:var(--accent);border-radius:100px;transition:width .5s ease;}
+.progress-fill.alt{background:var(--accent2);}
+.summary-box{background:linear-gradient(135deg,rgba(200,245,100,.08) 0%,rgba(123,97,255,.05) 100%);border:1px solid rgba(200,245,100,.2);border-radius:16px;padding:20px;margin-top:16px;}
+.summary-text{font-size:13px;line-height:1.6;color:var(--text);}
+.summary-highlight{color:var(--accent);font-weight:600;}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:100px;font-size:11px;font-weight:700;letter-spacing:.04em;margin:4px 4px 4px 0;}
+.badge.good{background:rgba(74,222,128,.15);color:var(--success);border:1px solid rgba(74,222,128,.3);}
+.badge.warn{background:rgba(255,209,102,.15);color:var(--accent4);border:1px solid rgba(255,209,102,.3);}
+.badge.bad{background:rgba(248,113,113,.15);color:var(--danger);border:1px solid rgba(248,113,113,.3);}
+.tabs{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;border-bottom:1px solid var(--border);padding-bottom:12px;}
+.tab-btn{padding:8px 16px;border-radius:100px;font-size:12px;font-weight:700;letter-spacing:.04em;cursor:pointer;border:1px solid var(--border);color:var(--muted);background:none;transition:all .2s;font-family:'Syne',sans-serif;}
+.tab-btn.active,.tab-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(200,245,100,.06);}
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+.table-wrap{overflow-x:auto;margin-top:12px;}
+.dt{width:100%;border-collapse:collapse;font-size:12px;}
+.dt th{color:var(--muted);font-weight:600;text-align:left;padding:10px 8px;border-bottom:1px solid var(--border);}
+.dt td{padding:10px 8px;border-bottom:1px solid rgba(255,255,255,.03);font-family:'DM Mono',monospace;font-size:11px;}
+.dt tr:last-child td{border-bottom:none;}
+.footer{display:flex;justify-content:center;gap:12px;margin-top:40px;padding-top:24px;border-top:1px solid var(--border);}
+.export-btn{background:var(--accent2);color:#fff;border:none;padding:12px 24px;border-radius:100px;font-family:'Syne',sans-serif;font-size:13px;cursor:pointer;transition:all .2s;font-weight:700;}
+.export-btn:hover{transform:scale(1.03);box-shadow:0 0 24px rgba(123,97,255,.4);}
+@media(max-width:768px){.main-content{padding:40px 16px;}.metrics-grid{grid-template-columns:1fr 1fr;}.result-cards{grid-template-columns:1fr;}.header-wrap{flex-direction:column;align-items:flex-start;gap:16px;}.header-title{font-size:24px;}}.empty-state{text-align:center;padding:60px 24px;color:var(--muted);}
+.empty-state-icon{font-size:48px;margin-bottom:16px;opacity:.5;}
+.empty-state-text{font-size:14px;margin-bottom:24px;}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-wrap">
+    <div class="header-title">Financial <span>Dashboard</span></div>
+    <div class="header-actions">
+      <button class="btn" onclick="goBack()">← Back</button>
+      <button class="btn primary" onclick="exportResults()">📊 Export</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main-content">
+
+  <!-- OVERVIEW SECTION -->
+  <div class="section" id="overview-section">
+    <div class="section-title">Financial Overview</div>
+    <div class="metrics-grid" id="overview-metrics"></div>
+  </div>
+
+  <!-- DEBT SECTION -->
+  <div class="section" id="debt-section" style="display:none;">
+    <div class="section-title">💳 Debt Management</div>
+    <div class="result-cards">
+      <div class="result-card">
+        <div class="card-header">
+          <div class="card-icon">💳</div>
+          <div class="card-title">Debt Payoff Plan</div>
+        </div>
+        <div class="card-body" id="debt-card"></div>
+      </div>
+      <div class="result-card">
+        <div class="card-header">
+          <div class="card-icon">📈</div>
+          <div class="card-title">Strategy Comparison</div>
+        </div>
+        <div class="card-body" id="debt-comparison"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOAN SECTION -->
+  <div class="section" id="loan-section" style="display:none;">
+    <div class="section-title">🏦 Loan Analysis</div>
+    <div class="result-cards">
+      <div class="result-card">
+        <div class="card-header">
+          <div class="card-icon">📋</div>
+          <div class="card-title">Loan Details</div>
+        </div>
+        <div class="card-body" id="loan-card"></div>
+      </div>
+      <div class="result-card">
+        <div class="card-header">
+          <div class="card-icon">📊</div>
+          <div class="card-title">Amortization Summary</div>
+        </div>
+        <div class="card-body" id="loan-amort"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CASHFLOW SECTION -->
+  <div class="section" id="cashflow-section" style="display:none;">
+    <div class="section-title">💰 Cash Flow Analysis</div>
+    <div class="result-cards">
+      <div class="result-card">
+        <div class="card-header">
+          <div class="card-icon">📊</div>
+          <div class="card-title">Monthly Cash Flow</div>
+        </div>
+        <div class="card-body" id="cashflow-card"></div>
+      </div>
+      <div class="result-card">
+        <div class="card-header">
+          <div class="card-icon">🎯</div>
+          <div class="card-title">Budget Breakdown</div>
+        </div>
+        <div class="card-body" id="cashflow-budget"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RETIREMENT SECTION -->
+  <div class="section" id="retirement-section" style="display:none;">
+    <div class="section-title">🏖️ Retirement Planning</div>
+    <div class="result-cards">
+      <div class="result-card">
+        <div class="card-header">
+          <div class="card-icon">💼</div>
+          <div class="card-title">Retirement Portfolio</div>
+        </div>
+        <div class="card-body" id="retirement-card"></div>
+      </div>
+      <div class="result-card">
+        <div class="card-header">
+          <div class="card-icon">📈</div>
+          <div class="card-title">IRA Breakdown</div>
+        </div>
+        <div class="card-body" id="retirement-ira"></div>
+      </div>
+      <div class="result-card">
+        <div class="card-header">
+          <div class="card-icon">📊</div>
+          <div class="card-title">Sustainability Analysis</div>
+        </div>
+        <div class="card-body" id="retirement-sustain"></div>
+      </div>
+    </div>
+    <div class="chart-container" id="retirement-chart"></div>
+  </div>
+
+  <!-- INVESTMENT SECTION -->
+  <div class="section" id="investment-section" style="display:none;">
+    <div class="section-title">📈 Investment Growth</div>
+    <div class="result-cards">
+      <div class="result-card">
+        <div class="card-header">
+          <div class="card-icon">💹</div>
+          <div class="card-title">Growth Projection</div>
+        </div>
+        <div class="card-body" id="investment-card"></div>
+      </div>
+      <div class="result-card">
+        <div class="card-header">
+          <div class="card-icon">🎯</div>
+          <div class="card-title">Return Analysis</div>
+        </div>
+        <div class="card-body" id="investment-analysis"></div>
+      </div>
+    </div>
+    <div class="chart-container" id="investment-chart"></div>
+  </div>
+
+  <!-- NET WORTH SECTION -->
+  <div class="section" id="networth-section" style="display:none;">
+    <div class="section-title">💎 Net Worth Statement</div>
+    <div class="result-cards">
+      <div class="result-card">
+        <div class="card-header">
+          <div class="card-icon">📊</div>
+          <div class="card-title">Net Worth Summary</div>
+        </div>
+        <div class="card-body" id="networth-card"></div>
+      </div>
+      <div class="result-card">
+        <div class="card-header">
+          <div class="card-icon">🔍</div>
+          <div class="card-title">Asset Allocation</div>
+        </div>
+        <div class="card-body" id="networth-allocation"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CASH FLOW SCENARIO -->
+  <div class="section" id="cashflow-scenario-section" style="display:none;">
+    <div class="section-title">📋 Scenario Comparison</div>
+    <div class="result-cards">
+      <div class="result-card" style="grid-column:1/-1;">
+        <div class="card-header">
+          <div class="card-icon">🔄</div>
+          <div class="card-title">Scenarios & What-If Analysis</div>
+        </div>
+        <div class="card-body" id="scenario-comparison"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <button class="btn" onclick="goBack()">← Back to Calculator</button>
+    <button class="export-btn" onclick="exportResults()">📥 Export As PDF</button>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+
+// ─── RETRIEVE RESULTS FROM SESSION STORAGE ───────────────────
+const results = JSON.parse(sessionStorage.getItem('financialResults') || '{}');
+const formData = JSON.parse(sessionStorage.getItem('formData') || '{}');
+const selectedModules = JSON.parse(sessionStorage.getItem('selectedModules') || '[]');
+
+// Format helpers
+const fmt = v => '$' + Math.abs(v).toLocaleString('en-US', {maximumFractionDigits: 0});
+const fmtPct = v => (v * 100).toFixed(2) + '%';
+const fmtNum = v => v.toLocaleString('en-US', {maximumFractionDigits: 0});
+
+// ─── RENDER OVERVIEW ────────────────────────────────────────
+function renderOverview() {
+  const container = document.getElementById('overview-metrics');
+  if (!container) return;
+
+  const metrics = [];
+
+  if (results.debt) {
+    metrics.push({
+      label: 'Total Debt',
+      value: fmt(results.debt.totalDebt || 0),
+      type: 'neutral'
+    });
+    metrics.push({
+      label: 'Payoff Time',
+      value: `${Math.floor(results.debt.months / 12)}y ${results.debt.months % 12}m`,
+      type: 'neutral'
+    });
+    metrics.push({
+      label: 'Interest Saved',
+      value: fmt(results.debt.interestSaved || 0),
+      type: 'positive'
+    });
+  }
+
+  if (results.retirement) {
+    metrics.push({
+      label: 'Retirement Portfolio',
+      value: fmt(results.retirement.portfolioAtRetirement || 0),
+      type: 'positive'
+    });
+    metrics.push({
+      label: 'Years to Retire',
+      value: results.retirement.yearsToRetire || 0,
+      type: 'neutral'
+    });
+  }
+
+  if (results.investment) {
+    metrics.push({
+      label: 'Investment Growth',
+      value: fmt(results.investment.finalValue || 0),
+      type: 'positive'
+    });
+    metrics.push({
+      label: 'Total Gains',
+      value: fmt(results.investment.totalGrowth || 0),
+      type: 'positive'
+    });
+  }
+
+  if (results.networth) {
+    metrics.push({
+      label: 'Net Worth',
+      value: fmt(results.networth.totalNetWorth || 0),
+      type: results.networth.totalNetWorth >= 0 ? 'positive' : 'negative'
+    });
+  }
+
+  if (metrics.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📊</div><div class="empty-state-text">No data available</div></div>';
+    return;
+  }
+
+  container.innerHTML = metrics.map(m => `
+    <div class="metric-card">
+      <div class="metric-label">${m.label}</div>
+      <div class="metric-value ${m.type}">${m.value}</div>
+    </div>
+  `).join('');
+}
+
+// ─── DEBT SECTION ───────────────────────────────────────────
+function renderDebtSection() {
+  if (results.debt) {
+    document.getElementById('debt-section').style.display = 'block';
+
+    const debtCard = `
+      <div class="metric-row">
+        <div class="metric-row-label">Total Debt</div>
+        <div class="metric-row-value">${fmt(results.debt.totalDebt || 0)}</div>
+      </div>
+      <div class="metric-row">
+        <div class="metric-row-label">Monthly Payment</div>
+        <div class="metric-row-value">${fmt(results.debt.monthlyPayment || 0)}</div>
+      </div>
+      <div class="metric-row">
+        <div class="metric-row-label">Payoff Timeline</div>
+        <div class="metric-row-value">${Math.floor(results.debt.months / 12)}y ${results.debt.months % 12}m</div>
+      </div>
+      <div class="metric-row">
+        <div class="metric-row-label">Total Interest Paid</div>
+        <div class="metric-row-value">${fmt(results.debt.totalInterest || 0)}</div>
+      </div>
+      <div class="summary-box">
+        <div class="summary-text">
+          Using the <span class="summary-highlight">${results.debt.strategy || 'avalanche'}</span> strategy, 
+          you can pay off all debt in <span class="summary-highlight">${Math.floor(results.debt.months / 12)} years</span>, 
+          saving <span class="summary-highlight">${fmt(results.debt.interestSaved || 0)}</span> in interest costs.
+        </div>
+      </div>
+    `;
+
+    const comparison = `
+      <div class="comparison-grid">
+        <div class="comp-item">
+          <div class="comp-label">Your Strategy (${results.debt.strategy})</div>
+          <div class="comp-value">${Math.floor(results.debt.months / 12)}y ${results.debt.months % 12}m</div>
+          <div class="progress-bar"><div class="progress-fill" style="width:100%"></div></div>
+        </div>
+        <div class="comp-item">
+          <div class="comp-label">Alternative (${results.debt.otherStrategy})</div>
+          <div class="comp-value alt">${Math.floor(results.debt.otherMonths / 12)}y ${results.debt.otherMonths % 12}m</div>
+          <div class="progress-bar"><div class="progress-fill alt" style="width:${Math.min(100, (results.debt.otherMonths / results.debt.months) * 100)}%"></div></div>
+        </div>
+      </div>
+      <div class="summary-box" style="margin-top:16px;">
+        <div class="summary-text">
+          By using <span class="summary-highlight">${results.debt.strategy}</span> instead of ${results.debt.otherStrategy}, 
+          you save <span class="summary-highlight">${Math.floor((results.debt.otherMonths - results.debt.months) / 12)} months</span>.
+        </div>
+      </div>
+    `;
+
+    document.getElementById('debt-card').innerHTML = debtCard;
+    document.getElementById('debt-comparison').innerHTML = comparison;
+  }
+}
+
+// ─── LOAN SECTION ───────────────────────────────────────────
+function renderLoanSection() {
+  if (results.loan) {
+    document.getElementById('loan-section').style.display = 'block';
+
+    const loanCard = `
+      <div class="metric-row">
+        <div class="metric-row-label">Loan Amount</div>
+        <div class="metric-row-value">${fmt(results.loan.loanAmount || 0)}</div>
+      </div>
+      <div class="metric-row">
+        <div class="metric-row-label">Interest Rate</div>
+        <div class="metric-row-value">${(results.loan.interestRate || 0).toFixed(2)}%</div>
+      </div>
+      <div class="metric-row">
+        <div class="metric-row-label">Loan Term</div>
+        <div class="metric-row-value">${results.loan.loanYears || 0} years</div>
+      </div>
+      <div class="metric-row">
+        <div class="metric-row-label">Monthly Payment</div>
+        <div class="metric-row-value">${fmt(results.loan.monthlyPayment || 0)}</div>
+      </div>
+      <div class="metric-row">
+        <div class="metric-row-label">Total Interest</div>
+        <div class="metric-row-value">${fmt(results.loan.totalInterest || 0)}</div>
+      </div>
+    `;
+
+    const amortTable = `
+      <div class="metric-row">
+        <div class="metric-row-label">Total Amount Paid</div>
+        <div class="metric-row-value">${fmt((results.loan.loanAmount || 0) + (results.loan.totalInterest || 0))}</div>
+      </div>
+      <div class="metric-row">
+        <div class="metric-row-label">Extra Payment</div>
+        <div class="metric-row-value">${fmt(results.loan.extraPayment || 0)}</div>
+      </div>
+      <div class="metric-row">
+        <div class="metric-row-label">Payoff Months</div>
+        <div class="metric-row-value">${results.loan.payoffMonths || 0}</div>
+      </div>
+    `;
+
+    document.getElementById('loan-card').innerHTML = loanCard;
+    document.getElementById('loan-amort').innerHTML = amortTable;
+  }
+}
+
+// ─── CASHFLOW SECTION ───────────────────────────────────────
+function renderCashflowSection() {
+  if (results.cashflow) {
+    document.getElementById('cashflow-section').style.display = 'block';
+
+    const cashflowCard = `
+      <div class="metric-row">
+        <div class="metric-row-label">Monthly Income</div>
+        <div class="metric-row-value">${fmt(results.cashflow.income || 0)}</div>
+      </div>
+      <div class="metric-row">
+        <div class="metric-row-label">Total Expenses</div>
+        <div class="metric-row-value">${fmt(results.cashflow.expenses || 0)}</div>
+      </div>
+      <div class="metric-row">
+        <div class="metric-row-label">Monthly Surplus</div>
+        <div class="metric-row-value ${(results.cashflow.surplus || 0) >= 0 ? 'positive' : 'negative'}">${fmt(results.cashflow.surplus || 0)}</div>
+      </div>
+      <div class="metric-row">
+        <div class="metric-row-label">Savings Rate</div>
+        <div class="metric-row-value">${fmtPct((results.cashflow.savingsRate || 0) / 100)}</div>
+      </div>
+    `;
+
+    const budgetBreakdown = `
+      <div class="metric-row">
+        <div class="metric-row-label">Housing</div>
+        <div class="metric-row-value">${fmt(results.cashflow.housing || 0)}</div>
+      </div>
+      <div class="metric-row">
+        <div class="metric-row-label">Food & Dining</div>
+        <div class="metric-row-value">${fmt(results.cashflow.foodDining || 0)}</div>
+      </div>
+      <div class="metric-row">
+        <div class="metric-row-label">Transportation</div>
+        <div class="metric-row-value">${fmt(results.cashflow.transportation || 0)}</div>
+      </div>
+      <div class="metric-row">
+        <div class="metric-row-label">Utilities & Services</div>
+        <div class="metric-row-value">${fmt(results.cashflow.utilities || 0)}</div>
+      </div>
+      <div class="metric-row">
+        <div class="metric-row-label">Entertainment</div>
+        <div class="metric-row-value">${fmt(results.cashflow.entertainment || 0)}</div>
+      </div>
+      <div class="metric-row">
+        <div class="metric-row-label">Other</div>
+        <div class="metric-row-value">${fmt(results.cashflow.other || 0)}</div>
+      </div>
+    `;
+
+    document.getElementById('cashflow-card').innerHTML = cashflowCard;
+    document.getElementById('cashflow-budget').innerHTML = budgetBreakdown;
+  }
+}
+
+// ─── RETIREMENT SECTION ──────────────────────────────────────
+function renderRetirementSection() {
+  if (results.retirement) {
+    document.getElementById('retirement-section').style.display = 'block';
+
+    const retirementCard = `
+      <div class="metric-row">
+        <div class="metric-row-label">Total Portfolio</div>
+        <div class="metric-row-value">${fmt(results.retirement.portfolioAtRetirement || 0)}</div>
+      </div>
+      <div class="metric-row">
+        <div class="metric-row-label">Years to Retirement</div>
+        <div class="metric-row-value">${results.retirement.yearsToRetire || 0}</div>
+      </div>
+      <div class="metric-row">
+        <div class="metric-row-label">After-Tax Portfolio</div>
+        <div class="metric-row-value">${fmt(results.retirement.totalAfterTax || 0)}</div>
+      </div>
+      <div class="metric-row">
+        <div class="metric-row-label">Annual Withdrawal</div>
+        <div class="metric-row-value">${fmt(results.retirement.annualWithdrawal || 0)}</div>
+      </div>
+    `;
+
+    const iraBreakdown = `
+      <div class="metric-row">
+        <div class="metric-row-label">Traditional IRA</div>
+        <div class="metric-row-value">${fmt(results.retirement.tradIraGross || 0)}</div>
+      </div>
+      <div class="metric-row">
+        <div class="metric-row-label">Trad IRA (After Tax)</div>
+        <div class="metric-row-value">${fmt(results.retirement.tradIraAfterTax || 0)}</div>
+      </div>
+      <div class="metric-row">
+        <div class="metric-row-label">Roth IRA</div>
+        <div class="metric-row-value">${fmt(results.retirement.rothIraValue || 0)}</div>
+      </div>
+      <div class="metric-row">
+        <div class="metric-row-label">General Savings</div>
+        <div class="metric-row-value">${fmt(results.retirement.generalSavings || 0)}</div>
+      </div>
+    `;
+
+    const sustainAnalysis = `
+      <div class="metric-row">
+        <div class="metric-row-label">Withdrawal Rate</div>
+        <div class="metric-row-value">${(results.retirement.withdrawalRatePct || 0).toFixed(2)}%</div>
+      </div>
+      <div class="metric-row">
+        <div class="metric-row-label">Funded Through</div>
+        <div class="metric-row-value">${results.retirement.fundedThrough || 'Unknown'}</div>
+      </div>
+      <div class="metric-row">
+        <div class="metric-row-label">RMD at 73</div>
+        <div class="metric-row-value">${fmt(results.retirement.rmdAt73 || 0)}/yr</div>
+      </div>
+      <div class="metric-row">
+        <div class="metric-row-label">Roth Eligibility</div>
+        <div class="metric-row-value">${(results.retirement.rothEligiblePct || 0).toFixed(1)}%</div>
+      </div>
+    `;
+
+    document.getElementById('retirement-card').innerHTML = retirementCard;
+    document.getElementById('retirement-ira').innerHTML = iraBreakdown;
+    document.getElementById('retirement-sustain').innerHTML = sustainAnalysis;
+  }
+}
+
+// ─── INVESTMENT SECTION ──────────────────────────────────────
+function renderInvestmentSection() {
+  if (results.investment) {
+    document.getElementById('investment-section').style.display = 'block';
+
+    const investmentCard = `
+      <div class="metric-row">
+        <div class="metric-row-label">Final Value</div>
+        <div class="metric-row-value">${fmt(results.investment.finalValue || 0)}</div>
+      </div>
+      <div class="metric-row">
+        <div class="metric-row-label">Total Contributed</div>
+        <div class="metric-row-value">${fmt(results.investment.totalContributed || 0)}</div>
+      </div>
+      <div class="metric-row">
+        <div class="metric-row-label">Investment Period</div>
+        <div class="metric-row-value">${results.investment.years || 0} years</div>
+      </div>
+      <div class="metric-row">
+        <div class="metric-row-label">Total Gains</div>
+        <div class="metric-row-value positive">${fmt(results.investment.totalGrowth || 0)}</div>
+      </div>
+    `;
+
+    const analysisCard = `
+      <div class="metric-row">
+        <div class="metric-row-label">Return on Principal</div>
+        <div class="metric-row-value">${(results.investment.returnOnPrincipal || 0).toFixed(2)}%</div>
+      </div>
+      <div class="metric-row">
+        <div class="metric-row-label">Initial Investment</div>
+        <div class="metric-row-value">${fmt(results.investment.initial || 0)}</div>
+      </div>
+      <div class="metric-row">
+        <div class="metric-row-label">Monthly Contribution</div>
+        <div class="metric-row-value">${fmt(results.investment.monthly || 0)}</div>
+      </div>
+      <div class="metric-row">
+        <div class="metric-row-label">Annual Return %</div>
+        <div class="metric-row-value">${(results.investment.annualReturn || 0).toFixed(2)}%</div>
+      </div>
+    `;
+
+    document.getElementById('investment-card').innerHTML = investmentCard;
+    document.getElementById('investment-analysis').innerHTML = analysisCard;
+  }
+}
+
+// ─── NET WORTH SECTION ───────────────────────────────────────
+function renderNetworthSection() {
+  if (results.networth) {
+    document.getElementById('networth-section').style.display = 'block';
+
+    const networthCard = `
+      <div class="metric-row">
+        <div class="metric-row-label">Total Assets</div>
+        <div class="metric-row-value positive">${fmt(results.networth.totalAssets || 0)}</div>
+      </div>
+      <div class="metric-row">
+        <div class="metric-row-label">Total Liabilities</div>
+        <div class="metric-row-value negative">${fmt(results.networth.totalLiabilities || 0)}</div>
+      </div>
+      <div class="metric-row">
+        <div class="metric-row-label">Net Worth</div>
+        <div class="metric-row-value ${(results.networth.totalNetWorth || 0) >= 0 ? 'positive' : 'negative'}">${fmt(results.networth.totalNetWorth || 0)}</div>
+      </div>
+      <div class="summary-box">
+        <div class="summary-text">
+          Your financial position: <span class="summary-highlight">${(results.networth.totalNetWorth || 0) >= 0 ? 'Positive' : 'Negative'}</span>
+        </div>
+      </div>
+    `;
+
+    const allocationCard = `
+      <table class="dt">
+        <tr><th>Category</th><th>Amount</th><th>%</th></tr>
+        ${results.networth.assets ? 
+          Object.entries(results.networth.assets).map(([k, v]) => {
+            const pct = ((v / (results.networth.totalAssets || 1)) * 100).toFixed(1);
+            return `<tr><td>${k}</td><td>${fmt(v)}</td><td>${pct}%</td></tr>`;
+          }).join('') 
+          : ''}
+      </table>
+    `;
+
+    document.getElementById('networth-card').innerHTML = networthCard;
+    document.getElementById('networth-allocation').innerHTML = allocationCard;
+  }
+}
+
+// ─── SCENARIO COMPARISON ────────────────────────────────────
+function renderScenarioComparison() {
+  if (results.scenarios && results.scenarios.length > 0) {
+    document.getElementById('cashflow-scenario-section').style.display = 'block';
+
+    const scenarioHTML = results.scenarios.map((scenario, idx) => `
+      <div class="comp-item">
+        <div class="comp-label">Scenario ${idx + 1}: ${scenario.name || 'Unknown'}</div>
+        <div class="metric-row" style="border:none; padding:8px 0;">
+          <div class="metric-row-label">Monthly Surplus</div>
+          <div class="metric-row-value">${fmt(scenario.surplus || 0)}</div>
+        </div>
+        <div class="metric-row" style="border:none; padding:8px 0;">
+          <div class="metric-row-label">Annual Savings</div>
+          <div class="metric-row-value">${fmt((scenario.surplus || 0) * 12)}</div>
+        </div>
+      </div>
+    `).join('');
+
+    document.getElementById('scenario-comparison').innerHTML = `
+      <div class="comparison-grid">${scenarioHTML}</div>
+    `;
+  }
+}
+
+// ─── NAVIGATION ──────────────────────────────────────────
+function goBack() {
+  window.location.href = 'HTML script.html';
+}
+
+function exportResults() {
+  alert('Export functionality coming soon!\nYou can manually save this page as PDF using Ctrl+P or Cmd+P');
+}
+
+// ─── INITIALIZE ──────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  renderOverview();
+  renderDebtSection();
+  renderLoanSection();
+  renderCashflowSection();
+  renderRetirementSection();
+  renderInvestmentSection();
+  renderNetworthSection();
+  renderScenarioComparison();
+});
+
+</script>
+</body>
+</html>
