@@ -30,13 +30,14 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 .metric-value.positive{color:var(--success);}
 .metric-value.negative{color:var(--danger);}
 .metric-value.neutral{color:var(--info);}
-.result-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px;}
-.result-card{background:var(--surface);border:1px solid var(--border);border-radius:18px;overflow:hidden;transition:all .2s;}
-.result-card:hover{border-color:var(--accent2);transform:translateY(-4px);box-shadow:0 8px 32px rgba(200,245,100,.1);}
-.card-header{background:linear-gradient(135deg,rgba(200,245,100,.1) 0%,rgba(123,97,255,.05) 100%);padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;}
+.result-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,340px));gap:20px;justify-items:start;}
+.result-card{background:var(--surface);border:1px solid var(--border);border-radius:18px;overflow:hidden;transition:all .3s ease;height:340px;width:340px;cursor:pointer;position:relative;display:flex;flex-direction:column;}
+.result-card:hover{border-color:var(--accent2);transform:scale(1.08) translateY(-8px);box-shadow:0 16px 48px rgba(200,245,100,.25);z-index:10;}
+.card-header{background:linear-gradient(135deg,rgba(200,245,100,.1) 0%,rgba(123,97,255,.05) 100%);padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0;}
 .card-icon{width:40px;height:40px;border-radius:10px;background:rgba(200,245,100,.15);display:flex;align-items:center;justify-content:center;font-size:20px;}
 .card-title{font-size:15px;font-weight:700;letter-spacing:.04em;}
-.card-body{padding:24px;}
+.card-body{padding:24px;overflow-y:auto;flex:1;transition:all .3s ease;}
+.result-card:hover .card-body{background:rgba(200,245,100,.03);}
 .metric-row{display:flex;justify-content:space-between;align-items:baseline;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04);}
 .metric-row:last-child{border-bottom:none;}
 .metric-row-label{font-size:12px;color:var(--muted);}
@@ -53,6 +54,10 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 .summary-box{background:linear-gradient(135deg,rgba(200,245,100,.08) 0%,rgba(123,97,255,.05) 100%);border:1px solid rgba(200,245,100,.2);border-radius:16px;padding:20px;margin-top:16px;}
 .summary-text{font-size:13px;line-height:1.6;color:var(--text);}
 .summary-highlight{color:var(--accent);font-weight:600;}
+.card-info-hint{position:absolute;top:12px;right:12px;width:28px;height:28px;background:rgba(200,245,100,.15);border:1px solid rgba(200,245,100,.3);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;opacity:0;transition:all .3s ease;pointer-events:none;}
+.result-card:hover .card-info-hint{opacity:1;background:rgba(200,245,100,.25);}
+.card-body-expand{max-height:0;overflow:hidden;opacity:0;transition:all .3s ease;font-size:12px;color:var(--muted);border-top:1px solid rgba(200,245,100,.1);padding-top:12px;margin-top:12px;}
+.result-card:hover .card-body-expand{max-height:200px;opacity:1;padding-top:16px;}
 .badge{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:100px;font-size:11px;font-weight:700;letter-spacing:.04em;margin:4px 4px 4px 0;}
 .badge.good{background:rgba(74,222,128,.15);color:var(--success);border:1px solid rgba(74,222,128,.3);}
 .badge.warn{background:rgba(255,209,102,.15);color:var(--accent4);border:1px solid rgba(255,209,102,.3);}
@@ -70,7 +75,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 .footer{display:flex;justify-content:center;gap:12px;margin-top:40px;padding-top:24px;border-top:1px solid var(--border);}
 .export-btn{background:var(--accent2);color:#fff;border:none;padding:12px 24px;border-radius:100px;font-family:'Syne',sans-serif;font-size:13px;cursor:pointer;transition:all .2s;font-weight:700;}
 .export-btn:hover{transform:scale(1.03);box-shadow:0 0 24px rgba(123,97,255,.4);}
-@media(max-width:768px){.main-content{padding:40px 16px;}.metrics-grid{grid-template-columns:1fr 1fr;}.result-cards{grid-template-columns:1fr;}.header-wrap{flex-direction:column;align-items:flex-start;gap:16px;}.header-title{font-size:24px;}}.empty-state{text-align:center;padding:60px 24px;color:var(--muted);}
+@media(max-width:768px){.main-content{padding:40px 16px;}.metrics-grid{grid-template-columns:1fr 1fr;}.result-cards{grid-template-columns:1fr;}.result-card{width:100%;}.header-wrap{flex-direction:column;align-items:flex-start;gap:16px;}.header-title{font-size:24px;}}.empty-state{text-align:center;padding:60px 24px;color:var(--muted);}
 .empty-state-icon{font-size:48px;margin-bottom:16px;opacity:.5;}
 .empty-state-text{font-size:14px;margin-bottom:24px;}
 </style>
@@ -361,38 +366,40 @@ function renderDebtSection() {
         <div class="metric-row-label">Total Interest Paid</div>
         <div class="metric-row-value">${fmt(results.debt.totalInterest || 0)}</div>
       </div>
-      <div class="summary-box">
-        <div class="summary-text">
-          Using the <span class="summary-highlight">${results.debt.strategy || 'avalanche'}</span> strategy, 
-          you can pay off all debt in <span class="summary-highlight">${Math.floor(results.debt.months / 12)} years</span>, 
-          saving <span class="summary-highlight">${fmt(results.debt.interestSaved || 0)}</span> in interest costs.
-        </div>
+      <div class="card-body-expand">
+        <div style="margin-bottom:8px;"><strong>💡 Additional Info:</strong></div>
+        <div>Strategy: ${results.debt.strategy || 'avalanche'}</div>
+        <div>Interest Saved: ${fmt(results.debt.interestSaved || 0)}</div>
+        <div>Alternative months: ${Math.floor(results.debt.otherMonths / 12)}y ${results.debt.otherMonths % 12}m</div>
       </div>
     `;
 
     const comparison = `
-      <div class="comparison-grid">
-        <div class="comp-item">
-          <div class="comp-label">Your Strategy (${results.debt.strategy})</div>
-          <div class="comp-value">${Math.floor(results.debt.months / 12)}y ${results.debt.months % 12}m</div>
-          <div class="progress-bar"><div class="progress-fill" style="width:100%"></div></div>
-        </div>
-        <div class="comp-item">
-          <div class="comp-label">Alternative (${results.debt.otherStrategy})</div>
-          <div class="comp-value alt">${Math.floor(results.debt.otherMonths / 12)}y ${results.debt.otherMonths % 12}m</div>
-          <div class="progress-bar"><div class="progress-fill alt" style="width:${Math.min(100, (results.debt.otherMonths / results.debt.months) * 100)}%"></div></div>
-        </div>
+      <div class="metric-row" style="border-bottom:none; padding:10px 0;">
+        <div class="metric-row-label">Strategy (${results.debt.strategy})</div>
+        <div class="metric-row-value">${Math.floor(results.debt.months / 12)}y ${results.debt.months % 12}m</div>
       </div>
-      <div class="summary-box" style="margin-top:16px;">
-        <div class="summary-text">
-          By using <span class="summary-highlight">${results.debt.strategy}</span> instead of ${results.debt.otherStrategy}, 
-          you save <span class="summary-highlight">${Math.floor((results.debt.otherMonths - results.debt.months) / 12)} months</span>.
-        </div>
+      <div class="metric-row" style="border-bottom:none; padding:10px 0;">
+        <div class="metric-row-label">Alternative (${results.debt.otherStrategy})</div>
+        <div class="metric-row-value alt">${Math.floor(results.debt.otherMonths / 12)}y ${results.debt.otherMonths % 12}m</div>
+      </div>
+      <div class="progress-bar" style="margin:12px 0;"><div class="progress-fill" style="width:100%"></div></div>
+      <div class="progress-bar"><div class="progress-fill alt" style="width:${Math.min(100, (results.debt.otherMonths / results.debt.months) * 100)}%"></div></div>
+      <div class="card-body-expand">
+        <div style="margin-bottom:8px;"><strong>📊 Savings Summary:</strong></div>
+        <div>Time saved: ${Math.floor((results.debt.otherMonths - results.debt.months) / 12)} months</div>
+        <div>Interest savings: ${fmt(results.debt.interestSaved || 0)}</div>
       </div>
     `;
 
-    document.getElementById('debt-card').innerHTML = debtCard;
-    document.getElementById('debt-comparison').innerHTML = comparison;
+    const debtCardEl = document.getElementById('debt-card');
+    const comparisonEl = document.getElementById('debt-comparison');
+    
+    debtCardEl.innerHTML = debtCard;
+    debtCardEl.parentElement.innerHTML += '<div class="card-info-hint">ℹ️</div>';
+    
+    comparisonEl.innerHTML = comparison;
+    comparisonEl.parentElement.innerHTML += '<div class="card-info-hint">ℹ️</div>';
   }
 }
 
@@ -422,11 +429,16 @@ function renderLoanSection() {
         <div class="metric-row-label">Total Interest</div>
         <div class="metric-row-value">${fmt(results.loan.totalInterest || 0)}</div>
       </div>
+      <div class="card-body-expand">
+        <div><strong>💰 Cost Breakdown:</strong></div>
+        <div>Total paid: ${fmt((results.loan.loanAmount || 0) + (results.loan.totalInterest || 0))}</div>
+        <div>Interest cost: ${fmt(results.loan.totalInterest || 0)}</div>
+      </div>
     `;
 
     const amortTable = `
       <div class="metric-row">
-        <div class="metric-row-label">Total Amount Paid</div>
+        <div class="metric-row-label">Total Paid</div>
         <div class="metric-row-value">${fmt((results.loan.loanAmount || 0) + (results.loan.totalInterest || 0))}</div>
       </div>
       <div class="metric-row">
@@ -437,10 +449,21 @@ function renderLoanSection() {
         <div class="metric-row-label">Payoff Months</div>
         <div class="metric-row-value">${results.loan.payoffMonths || 0}</div>
       </div>
+      <div class="card-body-expand">
+        <div><strong>⏱️ Timeline Details:</strong></div>
+        <div>Years: ${Math.floor((results.loan.payoffMonths || 0) / 12)}</div>
+        <div>Base term: ${results.loan.loanYears} years</div>
+      </div>
     `;
 
-    document.getElementById('loan-card').innerHTML = loanCard;
-    document.getElementById('loan-amort').innerHTML = amortTable;
+    const loanCardEl = document.getElementById('loan-card');
+    const amortEl = document.getElementById('loan-amort');
+    
+    loanCardEl.innerHTML = loanCard;
+    loanCardEl.parentElement.innerHTML += '<div class="card-info-hint">ℹ️</div>';
+    
+    amortEl.innerHTML = amortTable;
+    amortEl.parentElement.innerHTML += '<div class="card-info-hint">ℹ️</div>';
   }
 }
 
@@ -466,6 +489,11 @@ function renderCashflowSection() {
         <div class="metric-row-label">Savings Rate</div>
         <div class="metric-row-value">${fmtPct((results.cashflow.savingsRate || 0) / 100)}</div>
       </div>
+      <div class="card-body-expand">
+        <div><strong>📈 Info:</strong></div>
+        <div>Annual surplus: ${fmt((results.cashflow.surplus || 0) * 12)}</div>
+        <div>Expense ratio: ${((results.cashflow.expenses / (results.cashflow.income || 1)) * 100).toFixed(1)}%</div>
+      </div>
     `;
 
     const budgetBreakdown = `
@@ -482,21 +510,27 @@ function renderCashflowSection() {
         <div class="metric-row-value">${fmt(results.cashflow.transportation || 0)}</div>
       </div>
       <div class="metric-row">
-        <div class="metric-row-label">Utilities & Services</div>
+        <div class="metric-row-label">Utilities</div>
         <div class="metric-row-value">${fmt(results.cashflow.utilities || 0)}</div>
-      </div>
-      <div class="metric-row">
-        <div class="metric-row-label">Entertainment</div>
-        <div class="metric-row-value">${fmt(results.cashflow.entertainment || 0)}</div>
       </div>
       <div class="metric-row">
         <div class="metric-row-label">Other</div>
         <div class="metric-row-value">${fmt(results.cashflow.other || 0)}</div>
       </div>
+      <div class="card-body-expand">
+        <div><strong>🎯 Budget Focus:</strong></div>
+        <div>Largest: ${['Housing','Food','Transport','Utilities','Other'][(function(){const vals=[results.cashflow.housing,results.cashflow.foodDining,results.cashflow.transportation,results.cashflow.utilities,results.cashflow.other]; return vals.indexOf(Math.max(...vals))})()]}</div>
+      </div>
     `;
 
-    document.getElementById('cashflow-card').innerHTML = cashflowCard;
-    document.getElementById('cashflow-budget').innerHTML = budgetBreakdown;
+    const cashflowCardEl = document.getElementById('cashflow-card');
+    const budgetEl = document.getElementById('cashflow-budget');
+    
+    cashflowCardEl.innerHTML = cashflowCard;
+    cashflowCardEl.parentElement.innerHTML += '<div class="card-info-hint">ℹ️</div>';
+    
+    budgetEl.innerHTML = budgetBreakdown;
+    budgetEl.parentElement.innerHTML += '<div class="card-info-hint">ℹ️</div>';
   }
 }
 
@@ -511,7 +545,7 @@ function renderRetirementSection() {
         <div class="metric-row-value">${fmt(results.retirement.portfolioAtRetirement || 0)}</div>
       </div>
       <div class="metric-row">
-        <div class="metric-row-label">Years to Retirement</div>
+        <div class="metric-row-label">Years to Retire</div>
         <div class="metric-row-value">${results.retirement.yearsToRetire || 0}</div>
       </div>
       <div class="metric-row">
@@ -521,6 +555,11 @@ function renderRetirementSection() {
       <div class="metric-row">
         <div class="metric-row-label">Annual Withdrawal</div>
         <div class="metric-row-value">${fmt(results.retirement.annualWithdrawal || 0)}</div>
+      </div>
+      <div class="card-body-expand">
+        <div><strong>🏖️ Retirement Status:</strong></div>
+        <div>Monthly income: ${fmt((results.retirement.annualWithdrawal || 0) / 12)}</div>
+        <div>Funded through: ${results.retirement.fundedThrough || 'Unknown'}</div>
       </div>
     `;
 
@@ -541,6 +580,11 @@ function renderRetirementSection() {
         <div class="metric-row-label">General Savings</div>
         <div class="metric-row-value">${fmt(results.retirement.generalSavings || 0)}</div>
       </div>
+      <div class="card-body-expand">
+        <div><strong>💼 Tax Info:</strong></div>
+        <div>Tax-free %: ${(results.retirement.rothEligiblePct || 0).toFixed(1)}%</div>
+        <div>Tax liability: ${fmt((results.retirement.tradIraGross || 0) - (results.retirement.tradIraAfterTax || 0))}</div>
+      </div>
     `;
 
     const sustainAnalysis = `
@@ -560,11 +604,25 @@ function renderRetirementSection() {
         <div class="metric-row-label">Roth Eligibility</div>
         <div class="metric-row-value">${(results.retirement.rothEligiblePct || 0).toFixed(1)}%</div>
       </div>
+      <div class="card-body-expand">
+        <div><strong>⚠️ Analysis:</strong></div>
+        <div>Rate status: ${(results.retirement.withdrawalRatePct || 0) <= 4 ? '✓ Safe' : '⚠️ High'}</div>
+        <div>RMD monthly: ${fmt((results.retirement.rmdAt73 || 0) / 12)}</div>
+      </div>
     `;
 
-    document.getElementById('retirement-card').innerHTML = retirementCard;
-    document.getElementById('retirement-ira').innerHTML = iraBreakdown;
-    document.getElementById('retirement-sustain').innerHTML = sustainAnalysis;
+    const retireCardEl = document.getElementById('retirement-card');
+    const iraEl = document.getElementById('retirement-ira');
+    const sustainEl = document.getElementById('retirement-sustain');
+    
+    retireCardEl.innerHTML = retirementCard;
+    retireCardEl.parentElement.innerHTML += '<div class="card-info-hint">ℹ️</div>';
+    
+    iraEl.innerHTML = iraBreakdown;
+    iraEl.parentElement.innerHTML += '<div class="card-info-hint">ℹ️</div>';
+    
+    sustainEl.innerHTML = sustainAnalysis;
+    sustainEl.parentElement.innerHTML += '<div class="card-info-hint">ℹ️</div>';
   }
 }
 
@@ -590,6 +648,11 @@ function renderInvestmentSection() {
         <div class="metric-row-label">Total Gains</div>
         <div class="metric-row-value positive">${fmt(results.investment.totalGrowth || 0)}</div>
       </div>
+      <div class="card-body-expand">
+        <div><strong>📈 Growth Details:</strong></div>
+        <div>Gain %: ${((results.investment.totalGrowth / (results.investment.totalContributed || 1)) * 100).toFixed(1)}%</div>
+        <div>Annual avg: ${fmt((results.investment.totalGrowth || 0) / (results.investment.years || 1))}</div>
+      </div>
     `;
 
     const analysisCard = `
@@ -609,10 +672,21 @@ function renderInvestmentSection() {
         <div class="metric-row-label">Annual Return %</div>
         <div class="metric-row-value">${(results.investment.annualReturn || 0).toFixed(2)}%</div>
       </div>
+      <div class="card-body-expand">
+        <div><strong>💡 Analysis:</strong></div>
+        <div>Total invested: ${fmt(results.investment.totalContributed || 0)}</div>
+        <div>Total interest: ${fmt(results.investment.totalGrowth || 0)}</div>
+      </div>
     `;
 
-    document.getElementById('investment-card').innerHTML = investmentCard;
-    document.getElementById('investment-analysis').innerHTML = analysisCard;
+    const investCardEl = document.getElementById('investment-card');
+    const analysisEl = document.getElementById('investment-analysis');
+    
+    investCardEl.innerHTML = investmentCard;
+    investCardEl.parentElement.innerHTML += '<div class="card-info-hint">ℹ️</div>';
+    
+    analysisEl.innerHTML = analysisCard;
+    analysisEl.parentElement.innerHTML += '<div class="card-info-hint">ℹ️</div>';
   }
 }
 
@@ -634,10 +708,10 @@ function renderNetworthSection() {
         <div class="metric-row-label">Net Worth</div>
         <div class="metric-row-value ${(results.networth.totalNetWorth || 0) >= 0 ? 'positive' : 'negative'}">${fmt(results.networth.totalNetWorth || 0)}</div>
       </div>
-      <div class="summary-box">
-        <div class="summary-text">
-          Your financial position: <span class="summary-highlight">${(results.networth.totalNetWorth || 0) >= 0 ? 'Positive' : 'Negative'}</span>
-        </div>
+      <div class="card-body-expand">
+        <div><strong>📊 Status:</strong></div>
+        <div>Position: ${(results.networth.totalNetWorth || 0) >= 0 ? '✓ Positive' : '⚠️ Negative'}</div>
+        <div>Equity %: ${((results.networth.totalAssets / (results.networth.totalAssets + results.networth.totalLiabilities || 1)) * 100).toFixed(1)}%</div>
       </div>
     `;
 
@@ -651,10 +725,20 @@ function renderNetworthSection() {
           }).join('') 
           : ''}
       </table>
+      <div class="card-body-expand" style="margin-top:8px;">
+        <div><strong>🎯 Breakdown:</strong></div>
+        <div>Asset count: ${results.networth.assets ? Object.keys(results.networth.assets).length : 0}</div>
+      </div>
     `;
 
-    document.getElementById('networth-card').innerHTML = networthCard;
-    document.getElementById('networth-allocation').innerHTML = allocationCard;
+    const networthCardEl = document.getElementById('networth-card');
+    const allocationEl = document.getElementById('networth-allocation');
+    
+    networthCardEl.innerHTML = networthCard;
+    networthCardEl.parentElement.innerHTML += '<div class="card-info-hint">ℹ️</div>';
+    
+    allocationEl.innerHTML = allocationCard;
+    allocationEl.parentElement.innerHTML += '<div class="card-info-hint">ℹ️</div>';
   }
 }
 
@@ -674,12 +758,17 @@ function renderScenarioComparison() {
           <div class="metric-row-label">Annual Savings</div>
           <div class="metric-row-value">${fmt((scenario.surplus || 0) * 12)}</div>
         </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px;">
+          10-year total: ${fmt((scenario.surplus || 0) * 12 * 10)}
+        </div>
       </div>
     `).join('');
 
-    document.getElementById('scenario-comparison').innerHTML = `
+    const scenarioEl = document.getElementById('scenario-comparison');
+    scenarioEl.innerHTML = `
       <div class="comparison-grid">${scenarioHTML}</div>
     `;
+    scenarioEl.parentElement.parentElement.innerHTML += '<div class="card-info-hint" style="top:12px;right:12px;">ℹ️</div>';
   }
 }
 
