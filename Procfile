@@ -1,1 +1,1 @@
-web: python3 -m http.server ${PORT:-8000}
+web: bash start.sh
